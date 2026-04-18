@@ -31,12 +31,10 @@ export interface ConnSmytheUiState {
 
 export type PlayoffSimModePersisted = 'quick' | 'monte_carlo';
 
-/** Bracket predictor UI + last run snapshots (JSON strings for structured results). */
+/** Bracket predictor UI (sim results are session-only; not stored across refresh). */
 export interface PlayoffPredictorPersistedState {
   mode: PlayoffSimModePersisted;
   monteCarloIterations: number;
-  lastQuickResultJson?: string;
-  lastMonteCarloSummaryJson?: string;
   simulationCount: number;
   favoritePredictedTeamSlug?: string;
   /** When true, bracket cards prefer team primary colors more aggressively. */

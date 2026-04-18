@@ -12,14 +12,9 @@ import type { MonteCarloSummary, QuickSimResult } from '../../../types/playoffs'
 import type { PlayoffSimModePersisted } from '../../../types/persistence';
 import { VisitorRegionNote } from '../../../components/VisitorRegionNote';
 import { PlayoffBracketView } from '../components/PlayoffBracketView';
-import {
-  formatPlayoffSeriesHeadline,
-  formatPlayoffSeriesRoundPlain,
-  winnerMapFromQuickResult,
-} from '../utils/bracketResolve';
+import { winnerMapFromQuickResult } from '../utils/bracketResolve';
 import {
   buildSimulationExplanation,
-  migrateQuickSimResult,
   runMonteCarlo,
   simulateBracket,
   summarizeQuickRunForDisplay,
@@ -67,24 +62,8 @@ export function PlayoffsBracketPage() {
     [],
   );
 
-  const [quickResult, setQuickResult] = useState<QuickSimResult | null>(() => {
-    try {
-      if (!pp.lastQuickResultJson) return null;
-      const parsed = JSON.parse(pp.lastQuickResultJson) as QuickSimResult;
-      return migrateQuickSimResult(parsed, PLAYOFF_BRACKET_2026, getSeriesById2026());
-    } catch {
-      return null;
-    }
-  });
-
-  const [mcSummary, setMcSummary] = useState<MonteCarloSummary | null>(() => {
-    try {
-      if (!pp.lastMonteCarloSummaryJson) return null;
-      return JSON.parse(pp.lastMonteCarloSummaryJson) as MonteCarloSummary;
-    } catch {
-      return null;
-    }
-  });
+  const [quickResult, setQuickResult] = useState<QuickSimResult | null>(null);
+  const [mcSummary, setMcSummary] = useState<MonteCarloSummary | null>(null);
 
   const [mcRunning, setMcRunning] = useState(false);
 
@@ -116,7 +95,6 @@ export function PlayoffsBracketPage() {
     );
     setQuickResult(result);
     setPlayoffPredictor({
-      lastQuickResultJson: JSON.stringify(result),
       simulationCount: state.playoffPredictor.simulationCount + 1,
     });
   }, [seriesById, setPlayoffPredictor, state.playoffPredictor.simulationCount]);
@@ -136,7 +114,6 @@ export function PlayoffsBracketPage() {
       );
       setMcSummary(summary);
       setPlayoffPredictor({
-        lastMonteCarloSummaryJson: JSON.stringify(summary),
         simulationCount: state.playoffPredictor.simulationCount + 1,
       });
       setMcRunning(false);
@@ -151,11 +128,7 @@ export function PlayoffsBracketPage() {
   const reset = useCallback(() => {
     setQuickResult(null);
     setMcSummary(null);
-    setPlayoffPredictor({
-      lastQuickResultJson: undefined,
-      lastMonteCarloSummaryJson: undefined,
-    });
-  }, [setPlayoffPredictor]);
+  }, []);
 
   const quickDisplay = quickResult ? summarizeQuickRunForDisplay(quickResult) : null;
 
@@ -400,33 +373,6 @@ export function PlayoffsBracketPage() {
           <p className="muted" style={{ fontSize: '0.9rem', marginBottom: 0 }}>
             {explanation.likelyFinalText}
           </p>
-        </section>
-      ) : null}
-
-      {quickResult ? (
-        <section className="card card-pad" style={{ marginBottom: '1rem' }}>
-          <h2 className="display" style={{ fontSize: '1.15rem', margin: '0 0 0.5rem' }}>
-            Round by round (last single run)
-          </h2>
-          <ol style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.88rem' }}>
-            {quickResult.seriesResults.map((r) => {
-              const s = seriesById.get(r.seriesId);
-              const headline = s ? formatPlayoffSeriesHeadline(s) : 'Matchup';
-              const rd = s ? formatPlayoffSeriesRoundPlain(s) : '';
-              return (
-                <li key={r.seriesId} style={{ marginBottom: '0.25rem' }}>
-                  <span className="muted">{rd}</span>
-                  {rd ? ': ' : null}
-                  {headline}{' '}
-                  <strong>
-                    ({r.homeWins}-{r.awayWins})
-                  </strong>{' '}
-                  → {franchiseBySlug.get(r.winnerSlug)?.currentDisplayName}
-                  {r.upset ? ' · upset' : ''}
-                </li>
-              );
-            })}
-          </ol>
         </section>
       ) : null}
 

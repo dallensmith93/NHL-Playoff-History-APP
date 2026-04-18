@@ -40,12 +40,20 @@ function migrateRaw(raw: unknown): AppPersistedStateV1 {
         ? (raw['connSmythe'] as unknown as AppPersistedStateV1['connSmythe'])
         : {}),
     },
-    playoffPredictor: {
-      ...defaultPersistedStateV1.playoffPredictor,
-      ...(isRecord(raw['playoffPredictor'])
-        ? (raw['playoffPredictor'] as unknown as AppPersistedStateV1['playoffPredictor'])
-        : {}),
-    },
+    playoffPredictor: (() => {
+      const ppRaw = isRecord(raw['playoffPredictor'])
+        ? (raw['playoffPredictor'] as Record<string, unknown>)
+        : {};
+      const {
+        lastQuickResultJson: _dropQuick,
+        lastMonteCarloSummaryJson: _dropMc,
+        ...ppRest
+      } = ppRaw;
+      return {
+        ...defaultPersistedStateV1.playoffPredictor,
+        ...(ppRest as unknown as AppPersistedStateV1['playoffPredictor']),
+      };
+    })(),
     teamNotes: isRecord(raw['teamNotes'])
       ? (raw['teamNotes'] as Record<string, string>)
       : {},
