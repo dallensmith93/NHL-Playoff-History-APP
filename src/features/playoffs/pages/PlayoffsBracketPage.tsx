@@ -10,6 +10,7 @@ import { PLAYOFF_TEAM_STATS_2026 } from '../../../data/playoffTeamStats2026';
 import { DEFAULT_SIMULATION_WEIGHTS } from '../../../data/simulationWeights';
 import type { MonteCarloSummary, QuickSimResult } from '../../../types/playoffs';
 import type { PlayoffSimModePersisted } from '../../../types/persistence';
+import { VisitorRegionNote } from '../../../components/VisitorRegionNote';
 import { PlayoffBracketView } from '../components/PlayoffBracketView';
 import {
   formatPlayoffSeriesHeadline,
@@ -32,8 +33,8 @@ function HowPredictorWorks() {
       </h2>
       <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.92rem' }} className="muted">
         <li>
-          This is a <strong>for-fun bracket toy</strong>, not an official NHL prediction. It uses saved team
-          numbers baked into the app—nothing is pulled from the internet when you click.
+          This is a <strong>for-fun bracket toy</strong>, not an official NHL prediction. Team strength numbers are
+          saved with the app—the picker does not fetch live stats when you run it.
         </li>
         <li>
           Each club gets a strength score from things like scoring-chance share, goals for and against, special
@@ -46,6 +47,10 @@ function HowPredictorWorks() {
         <li>
           Run it once for a single story, or run it many times and average the outcomes to see which teams show up
           most often.
+        </li>
+        <li>
+          The short “hello from near…” line on this page uses a general-area lookup from your connection; it does
+          not change the bracket math.
         </li>
       </ul>
     </section>
@@ -172,6 +177,7 @@ export function PlayoffsBracketPage() {
           Nothing here phones home for scores or updates. Use the buttons below to play out the playoffs with a
           lighthearted, stats-based picker—rerun anytime for a different winner.
         </p>
+        <VisitorRegionNote style={{ marginTop: '0.65rem', maxWidth: '42rem' }} />
       </div>
 
       <section className="card card-pad" style={{ marginBottom: '1rem' }}>

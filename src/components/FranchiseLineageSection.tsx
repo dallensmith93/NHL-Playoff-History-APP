@@ -55,9 +55,7 @@ function IdentityEraCard({
           <p style={{ margin: '0.5rem 0 0', fontSize: '0.92rem' }}>{identity.eraNotes}</p>
         )}
         <p className="muted" style={{ margin: '0.35rem 0 0', fontSize: '0.8rem' }}>
-          Era colors: primary <code style={{ fontSize: '0.85em' }}>{c.primary}</code> · secondary{' '}
-          <code style={{ fontSize: '0.85em' }}>{c.secondary}</code>
-          {identity.eraColors ? ' (overrides franchise defaults)' : ' (franchise default)'}
+          Palette for this era{identity.eraColors ? ' (custom)' : ' (team default)'}.
         </p>
       </div>
     </div>
@@ -87,10 +85,9 @@ export function FranchiseLineageSection({ franchise }: { franchise: Franchise })
         Franchise lineage &amp; identity eras
       </h3>
       <p className="muted" style={{ marginTop: 0, maxWidth: '62ch' }}>
-        One continuous franchise entity may span several <strong>identities</strong> (renames,
-        relocations, rebrands). Trophy rows in the dataset belong to the franchise as a whole; use the
-        snapshot on this page to compare <em>lifetime</em> totals with the <em>current identity</em>{' '}
-        window when useful.
+        One club may span several <strong>identities</strong> (new names or cities). Trophies belong to the whole
+        franchise unless the history was split on purpose. Use the snapshots on this page to compare full-club
+        totals with the <em>current era</em> only.
       </p>
 
       {ids.length === 0 ? (

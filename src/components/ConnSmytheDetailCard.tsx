@@ -30,10 +30,7 @@ export function ConnSmytheDetailCard({
         {franchise ? (
           <Link to={`/franchises/${franchise.slug}`}>{franchise.currentDisplayName}</Link>
         ) : (
-          <span className="muted">
-            No match — add or fix <code>franchiseId</code> on this winner in{' '}
-            <code>src/data/connSmythe.ts</code>.
-          </span>
+          <span className="muted">No matching franchise page yet for this winner.</span>
         )}
       </p>
       <p className="muted" style={{ margin: '0.75rem 0 0', fontSize: '0.85rem' }}>

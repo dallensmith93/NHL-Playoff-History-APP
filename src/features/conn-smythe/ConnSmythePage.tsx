@@ -44,9 +44,8 @@ export function ConnSmythePage() {
       <div className="page-hero">
         <h1>Conn Smythe Trophy</h1>
         <p className="lede">
-          Full winner history from the local dataset. Search and filters persist in{' '}
-          <code>localStorage</code>. Each row links to a franchise when <code>franchiseId</code> is set
-          (or when the team label resolves).
+          Full Conn Smythe winner history. Search and filters are remembered on this device. Each row links to a
+          franchise when we can match the winning team to a club in the app.
         </p>
       </div>
 

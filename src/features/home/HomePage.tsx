@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useMemo, type CSSProperties } from 'react';
 import { FranchiseLogo } from '../../components/FranchiseLogo';
+import { VisitorRegionNote } from '../../components/VisitorRegionNote';
 import { usePersistence } from '../../app/persistence';
 import { FRANCHISES, getFranchiseBySlug, getLeagueQuickStats } from '../../data/franchises';
 import { computeFranchiseStats } from '../../lib/franchiseStats';
@@ -54,12 +55,13 @@ export function HomePage() {
   return (
     <div className="home">
       <header className="home-hero">
-        <p className="home-hero-eyebrow">Local dataset · no live scores</p>
+        <p className="home-hero-eyebrow">History &amp; records · not a live scoreboard</p>
         <h1>NHL franchise history</h1>
         <p className="home-hero-lede">
           Explore lineages, relocations, and trophy history. Your favorites, notes, and filters stay
           on this device.
         </p>
+        <VisitorRegionNote style={{ marginTop: '0.65rem', maxWidth: '40rem' }} />
         <p className="home-hero-lede" style={{ marginTop: '0.75rem' }}>
           <Link to="/playoffs/2026-bracket">2026 playoffs bracket &amp; champion picker →</Link>
         </p>
@@ -71,16 +73,16 @@ export function HomePage() {
             League snapshot
           </h2>
           <p className="home-section-sub">
-            Cup records and droughts use only teams with <strong>full trophy data</strong> in this app.
+            Cup records and droughts count teams that have <strong>complete trophy history</strong> here.
             Reference season: <strong>{DASHBOARD_REFERENCE_SEASON_LABEL}</strong>.
           </p>
         </div>
 
         <div className="stat-tiles">
           <div className="stat-tile">
-            <span className="stat-tile-label">Active in dataset</span>
+            <span className="stat-tile-label">Active clubs</span>
             <span className="stat-tile-value">{formatNumber(dash.totalActiveFranchises)}</span>
-            <span className="stat-tile-hint">Franchises flagged active in the dataset</span>
+            <span className="stat-tile-hint">Still playing today</span>
           </div>
           <div className="stat-tile">
             <span className="stat-tile-label">Defunct / inactive</span>
@@ -88,7 +90,7 @@ export function HomePage() {
             <span className="stat-tile-hint">Historical or ceased entries</span>
           </div>
           <div className="stat-tile stat-tile--wide">
-            <span className="stat-tile-label">Most Cups (modeled)</span>
+            <span className="stat-tile-label">Most Stanley Cups</span>
             <span className="stat-tile-value stat-tile-value--text">
               {dash.franchiseMostChampionships ? (
                 <>
@@ -105,7 +107,7 @@ export function HomePage() {
             </span>
           </div>
           <div className="stat-tile stat-tile--wide">
-            <span className="stat-tile-label">Longest active drought (modeled)</span>
+            <span className="stat-tile-label">Longest active Cup drought</span>
             <span className="stat-tile-value stat-tile-value--text">
               {dash.longestActiveCupDrought ? (
                 <>
@@ -128,18 +130,18 @@ export function HomePage() {
 
         <div className="stat-tiles stat-tiles--compact">
           <div className="stat-tile stat-tile--muted">
-            <span className="stat-tile-label">Teams in dataset</span>
+            <span className="stat-tile-label">Teams in app</span>
             <span className="stat-tile-value">{formatNumber(stats.franchiseCount)}</span>
           </div>
           <div className="stat-tile stat-tile--muted">
-            <span className="stat-tile-label">Modeled active clubs</span>
+            <span className="stat-tile-label">Active with full data</span>
             <span className="stat-tile-value">{formatNumber(modeledActiveCount)}</span>
-            <span className="stat-tile-hint">Active with full data</span>
+            <span className="stat-tile-hint">Included in key league stats</span>
           </div>
           <div className="stat-tile stat-tile--muted">
             <span className="stat-tile-label">Cup wins recorded</span>
             <span className="stat-tile-value">{formatNumber(stats.totalCupChampionshipsInDataset)}</span>
-            <span className="stat-tile-hint">Sum of championship rows</span>
+            <span className="stat-tile-hint">Championships counted in the app</span>
           </div>
           <div className="stat-tile stat-tile--muted">
             <span className="stat-tile-label">Conn Smythe rows</span>
@@ -158,8 +160,8 @@ export function HomePage() {
             Franchises
           </h2>
           <p className="home-section-sub">
-            Current team marks from Wikipedia infobox thumbnails (Wikimedia). Active NHL clubs modeled
-            in the dataset, plus the Arizona Coyotes charter (inactive; continued by Utah).
+            Logos from Wikipedia. Includes today’s active clubs plus the Arizona Coyotes charter (inactive; continued
+            by Utah).
           </p>
         </div>
 
@@ -229,8 +231,8 @@ export function HomePage() {
             <span className="home-link-card-desc">{state.favorites.length} saved</span>
           </Link>
           <Link className="home-link-card" to="/about">
-            <span className="home-link-card-title">About &amp; backup</span>
-            <span className="home-link-card-desc">Data notes, export JSON</span>
+            <span className="home-link-card-title">About</span>
+            <span className="home-link-card-desc">Data model and local storage</span>
           </Link>
         </div>
       </section>

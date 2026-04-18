@@ -8,11 +8,6 @@ import {
   type ReactNode,
 } from 'react';
 import { loadPersistedState, savePersistedState } from '../lib/localStorage';
-import {
-  buildUserLibraryExport,
-  parseUserLibraryImport,
-  serializeUserLibraryExport,
-} from '../lib/userLibraryExport';
 import type {
   AppPersistedStateV1,
   ConnSmytheUiState,
@@ -23,13 +18,6 @@ import type {
 } from '../types/persistence';
 
 const RECENT_SLUGS_CAP = 20;
-
-export type UserLibraryImportMode = 'merge' | 'replace';
-
-export interface UserLibraryImportResult {
-  ok: boolean;
-  error?: string;
-}
 
 export interface PersistenceApi {
   state: AppPersistedStateV1;
@@ -42,9 +30,6 @@ export interface PersistenceApi {
   setComparePair: (a: string | undefined, b: string | undefined) => void;
   setConnSmytheUi: (partial: Partial<ConnSmytheUiState>) => void;
   setPlayoffPredictor: (partial: Partial<PlayoffPredictorPersistedState>) => void;
-  /** JSON string suitable for download (favorites + team notes only). */
-  exportUserLibraryJson: () => string;
-  importUserLibrary: (json: string, mode: UserLibraryImportMode) => UserLibraryImportResult;
 }
 
 const PersistenceContext = createContext<PersistenceApi | null>(null);
@@ -116,32 +101,6 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const exportUserLibraryJson = useCallback(() => {
-    return serializeUserLibraryExport(buildUserLibraryExport(state.favorites, state.teamNotes));
-  }, [state.favorites, state.teamNotes]);
-
-  const importUserLibrary = useCallback((json: string, mode: UserLibraryImportMode) => {
-    const parsed = parseUserLibraryImport(json);
-    if (!parsed) {
-      return { ok: false, error: 'Invalid JSON or wrong format (expected userLibraryVersion 1).' };
-    }
-    setState((prev) => {
-      if (mode === 'replace') {
-        return {
-          ...prev,
-          favorites: [...parsed.favorites],
-          teamNotes: { ...parsed.teamNotes },
-        };
-      }
-      return {
-        ...prev,
-        favorites: [...new Set([...prev.favorites, ...parsed.favorites])],
-        teamNotes: { ...prev.teamNotes, ...parsed.teamNotes },
-      };
-    });
-    return { ok: true };
-  }, []);
-
   const value = useMemo<PersistenceApi>(
     () => ({
       state,
@@ -154,8 +113,6 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
       setComparePair,
       setConnSmytheUi,
       setPlayoffPredictor,
-      exportUserLibraryJson,
-      importUserLibrary,
     }),
     [
       state,
@@ -168,8 +125,6 @@ export function PersistenceProvider({ children }: { children: ReactNode }) {
       setComparePair,
       setConnSmytheUi,
       setPlayoffPredictor,
-      exportUserLibraryJson,
-      importUserLibrary,
     ],
   );
 

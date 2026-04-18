@@ -5,11 +5,7 @@ import { FRANCHISE_BY_ID } from '../data/franchises';
 function LinkToFranchise({ id, label }: { id: string; label: string }) {
   const f = FRANCHISE_BY_ID.get(id);
   if (!f) {
-    return (
-      <span className="muted">
-        {label}: <code>{id}</code> (not in dataset)
-      </span>
-    );
+    return <span className="muted">{label}: link not available for this entry.</span>;
   }
   return (
     <Link to={`/franchises/${f.slug}`}>

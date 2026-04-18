@@ -88,7 +88,7 @@ export function FranchiseDetailPage() {
       <div className="empty card card-pad">
         <h2>Franchise not found</h2>
         <p className="muted">
-          No franchise matches <code>{slug ?? '?'}</code>. Check the URL slug or return to the index.
+          No team matches that address. Try the franchise list or pick another link.
         </p>
         <Link to="/franchises" className="btn" style={{ display: 'inline-block', marginTop: '0.5rem' }}>
           Back to franchises
@@ -183,7 +183,7 @@ export function FranchiseDetailPage() {
           </p>
         ) : (
           <p className="muted" style={{ margin: 0 }}>
-            No identity eras defined — add `lineage.identities` to model the timeline.
+            No identity eras are listed for this franchise yet.
           </p>
         )}
         {!multi && (
@@ -239,14 +239,11 @@ export function FranchiseDetailPage() {
         </div>
       )}
 
-      {validation.length > 0 && (
+      {import.meta.env.DEV && validation.length > 0 && (
         <div className="card card-pad" style={{ marginBottom: '1rem' }}>
           <h2 className="display" style={{ margin: '0 0 0.5rem' }}>
-            Data checks
+            Data checks (dev only)
           </h2>
-          <p className="muted" style={{ marginTop: 0, fontSize: '0.88rem' }}>
-            Helpers in <code>src/lib/franchiseValidation.ts</code> — use these hints to tighten the data model.
-          </p>
           <ul style={{ margin: '0.5rem 0 0', paddingLeft: '1.1rem' }}>
             {validation.map((issue, i) => (
               <li key={`${issue.code}-${i}`} style={{ marginBottom: '0.35rem' }}>
@@ -261,12 +258,9 @@ export function FranchiseDetailPage() {
                           : 'var(--muted)',
                   }}
                 >
-                  [{issue.severity}]
+                  {issue.severity}:
                 </span>{' '}
-                {issue.message}{' '}
-                <span className="muted" style={{ fontSize: '0.8rem' }}>
-                  ({issue.code})
-                </span>
+                {issue.message}
               </li>
             ))}
           </ul>
@@ -281,19 +275,19 @@ export function FranchiseDetailPage() {
         }}
       >
         <h2 className="display" style={{ margin: '0 0 0.75rem' }}>
-          Computed snapshot
+          By the numbers
         </h2>
         <StatsSnapshot
-          title="Franchise lifetime (all identities)"
+          title="Full franchise history (every era)"
           stats={stats}
-          subtitle="Derived from full playoff / SCF / championship arrays on this row."
+          subtitle="Playoffs, finals, and Cups across the whole timeline."
         />
         {multi && identityStats && (
           <div style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid var(--border)' }}>
             <StatsSnapshot
               title={`Current identity window — ${currentIdentity?.fullName ?? ''}`}
               stats={identityStats}
-              subtitle="Rows whose season falls inside this identity’s from/to range only."
+              subtitle="Only seasons in this identity’s date range."
             />
           </div>
         )}
@@ -309,7 +303,7 @@ export function FranchiseDetailPage() {
           </h3>
           {franchise.playoffAppearances.length === 0 ? (
             <p className="muted" style={{ margin: 0 }}>
-              No playoff rows yet — add `playoffAppearances` in the dataset.
+              No playoff appearances listed yet.
             </p>
           ) : (
             <ul style={{ margin: 0, paddingLeft: '1.1rem', maxHeight: '220px', overflow: 'auto' }}>
@@ -402,12 +396,12 @@ export function FranchiseDetailPage() {
           Conn Smythe awards
         </h3>
         <p className="muted" style={{ margin: '0 0 0.75rem', fontSize: '0.9rem' }}>
-          Winners tied to this franchise via <code>franchiseId</code> in <code>connSmythe.ts</code> — including
-          Conn Smythe recipients whose team lost the Stanley Cup Final that year.
+          Winners linked to this franchise—including the rare cases where the Conn Smythe went to a player whose team
+          lost the Final.
         </p>
         {connSmytheSummary && connSmytheSummary.count === 0 ? (
           <p className="muted" style={{ margin: 0 }}>
-            No Conn Smythe rows for this <code>franchiseId</code> yet.
+            No Conn Smythe winners tied to this franchise yet.
           </p>
         ) : (
           <div className="stat-grid">
@@ -463,8 +457,7 @@ export function FranchiseDetailPage() {
           Your notes
         </h3>
         <p className="muted" style={{ marginTop: 0, fontSize: '0.9rem' }}>
-          Personal scratchpad — stored only in this browser ({`localStorage`}), separate from team
-          history on this page.
+          Personal scratchpad—only on this browser, separate from the team history above.
         </p>
         <textarea
           className="textarea"

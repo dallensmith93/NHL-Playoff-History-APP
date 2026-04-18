@@ -16,13 +16,13 @@ export function FavoritesPage() {
       <div>
         <div className="page-hero">
           <h1>Favorites</h1>
-          <p className="lede">Saved franchises from your browser — empty for now.</p>
+          <p className="lede">Saved franchises on this device — empty for now.</p>
         </div>
         <div className="empty card card-pad">
           <h2>No favorites yet</h2>
           <p className="muted">
-            Open any franchise and tap <strong>Add favorite</strong>. The list persists in{' '}
-            <code>localStorage</code>.
+            Open any franchise and tap <strong>Add favorite</strong>. The list stays in this browser until you clear
+            it.
           </p>
           <Link to="/franchises" className="btn" style={{ display: 'inline-block', marginTop: '0.5rem' }}>
             Browse franchises
