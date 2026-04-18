@@ -1,0 +1,32 @@
+{
+  "name": "nhl-playoff-history-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "generate:wiki-assets": "node scripts/fetch-franchise-wiki-assets.mjs",
+    "generate:nhle-playoffs": "node scripts/generate-franchise-playoffs-nhle.mjs",
+    "generate:nhle-divisions": "node scripts/generate-franchise-division-titles-nhl.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "jsdom": "^25.0.1",
+    "typescript": "~5.6.3",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.6"
+  }
+}
