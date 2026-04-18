@@ -184,7 +184,10 @@ export function PlayoffsBracketPage() {
         <h2 className="display" style={{ fontSize: '1.2rem', margin: '0 0 0.75rem' }}>
           Champion picker
         </h2>
-        <div className="filters-row" style={{ flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}>
+        <div
+          className="filters-row playoffs-champion-controls"
+          style={{ flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.75rem' }}
+        >
           <div className="field">
             <label htmlFor="pp-mode">How to run it</label>
             <select
@@ -224,14 +227,14 @@ export function PlayoffsBracketPage() {
             </label>
           </div>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <div className="playoffs-champion-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
           <button type="button" className="btn btn-primary" onClick={runQuick}>
             Pick a champion (one run)
           </button>
           <button type="button" className="btn" onClick={runMonte} disabled={mcRunning}>
             {mcRunning ? 'Working through the runs…' : 'Run a bunch and average'}
           </button>
-          <button type="button" onClick={reset}>
+          <button type="button" className="btn" onClick={reset}>
             Clear saved picks
           </button>
         </div>

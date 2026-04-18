@@ -1178,11 +1178,246 @@ h3,
 }
 
 @media (max-width: 720px) {
+  .playoff-bracket-row {
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: stretch;
+  }
+
+  .playoff-bracket-row > .playoff-bracket-connector {
+    display: none;
+  }
+
+  .playoff-bracket-half-inner .playoff-bracket-connector {
+    display: none;
+  }
+
   .playoff-bracket-half-inner {
-    min-height: 24rem;
+    flex-direction: column;
+    min-height: auto;
+    gap: 0.65rem;
+  }
+
+  .playoff-bracket-half--west .playoff-bracket-half-inner {
+    flex-direction: column;
+  }
+
+  .playoff-bracket-col--feed,
+  .playoff-bracket-col--mid,
+  .playoff-bracket-col--single {
+    justify-content: flex-start;
+  }
+
+  .playoff-bracket-col--final-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
   }
 
   .playoff-bracket-conf-heading {
-    font-size: 0.88rem;
+    font-size: 0.92rem;
+  }
+
+  .playoff-bracket-conf-heading--west {
+    text-align: center;
+  }
+
+  .playoff-bracket-name {
+    font-size: 0.76rem;
+  }
+
+  .playoffs-odds-table {
+    font-size: 0.82rem;
+  }
+
+  .playoffs-odds-table th,
+  .playoffs-odds-table td {
+    padding: 0.4rem 0.35rem;
+  }
+}
+
+/* ——— Mobile (narrow phones) ——— */
+@media (max-width: 640px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  .shell {
+    padding: 0 max(1rem, env(safe-area-inset-left, 0px))
+      calc(2.5rem + env(safe-area-inset-bottom, 0px)) max(1rem, env(safe-area-inset-right, 0px));
+  }
+
+  .nav-inner {
+    padding: max(0.55rem, env(safe-area-inset-top, 0px)) max(1rem, env(safe-area-inset-right, 0px)) 0.6rem
+      max(1rem, env(safe-area-inset-left, 0px));
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+  }
+
+  .nav-brand {
+    font-size: 1.08rem;
+  }
+
+  .nav-links {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 0.3rem;
+    margin: 0 -0.2rem;
+    padding: 0.15rem 0.2rem 0.4rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .nav-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-link {
+    flex-shrink: 0;
+    padding: 0.5rem 0.8rem;
+    min-height: 44px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .theme-toggle {
+    margin-left: 0;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .theme-toggle button {
+    min-height: 44px;
+    padding: 0.4rem 0.85rem;
+    touch-action: manipulation;
+  }
+
+  .filters-sticky {
+    top: calc(52px + env(safe-area-inset-top, 0px));
+    padding-top: 0.55rem;
+  }
+
+  .page-hero {
+    padding: 1.25rem 0 0.85rem;
+  }
+
+  .page-hero h1 {
+    font-size: clamp(1.45rem, 6.5vw, 2rem);
+    line-height: 1.12;
+  }
+
+  .home-hero {
+    padding: 1.45rem 1.1rem 1.25rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .home-hero h1 {
+    font-size: clamp(1.65rem, 7vw, 2.4rem);
+  }
+
+  .home-hero-lede {
+    font-size: 1rem;
+    max-width: none;
+  }
+
+  .home-link-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .grid-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-tiles {
+    grid-template-columns: 1fr;
+  }
+
+  .card-pad {
+    padding: 1rem 1rem;
+  }
+
+  .field input[type='text'],
+  .field input[type='search'],
+  .field input[type='number'],
+  .field input[type='email'],
+  .field select,
+  .textarea {
+    font-size: 1rem;
+  }
+
+  .btn {
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+    touch-action: manipulation;
+  }
+
+  .team-header {
+    padding: 1rem 1rem;
+  }
+
+  .team-header h1 {
+    font-size: clamp(1.3rem, 7vw, 1.85rem);
+  }
+
+  .team-header-brand {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .playoffs-champion-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .playoffs-champion-controls .field {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .playoffs-champion-controls #pp-mc-n {
+    width: 100%;
+    max-width: 12rem;
+  }
+
+  .playoffs-champion-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .playoffs-champion-actions .btn {
+    display: inline-flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .home-featured-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-logo-grid {
+    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+    gap: 0.55rem;
+  }
+
+  .home-logo-grid--compact {
+    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+    max-width: none;
+  }
+
+  .home-logo-cell {
+    padding: 0.85rem 0.45rem 0.75rem;
+    min-height: 44px;
   }
 }
