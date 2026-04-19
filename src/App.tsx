@@ -21,6 +21,7 @@ export default function App() {
         <Route path="favorites" element={<FavoritesPage />} />
         <Route path="about" element={<AboutPage />} />
         <Route path="playoffs/2026-bracket" element={<PlayoffsBracketPage />} />
+        <Route path="playoffs/2026" element={<PlayoffsBracketPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

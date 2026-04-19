@@ -1,21 +1,25 @@
 import { useMemo, useState, useCallback } from 'react';
 import { usePersistence } from '../../../app/persistence';
 import { FRANCHISES } from '../../../data/franchises';
-import {
-  getSeriesById2026,
-  PLAYOFF_BRACKET_2026,
-  PLAYOFF_TEAM_ENTRY_BY_SLUG,
-} from '../../../data/playoffBracket2026';
+import { getSeriesByIdFromBracket, PLAYOFF_TEAM_ENTRY_BY_SLUG } from '../../../data/playoffBracket2026';
 import { PLAYOFF_TEAM_STATS_2026 } from '../../../data/playoffTeamStats2026';
 import { DEFAULT_SIMULATION_WEIGHTS } from '../../../data/simulationWeights';
 import type { MonteCarloSummary, QuickSimResult } from '../../../types/playoffs';
 import type { PlayoffSimModePersisted } from '../../../types/persistence';
 import { VisitorRegionNote } from '../../../components/VisitorRegionNote';
+import { LiveScoreStrip } from '../components/LiveScoreStrip';
 import { PlayoffBracketView } from '../components/PlayoffBracketView';
+import { PredictionSummary } from '../components/PredictionSummary';
+import { TeamOddsTable } from '../components/TeamOddsTable';
+import { UpsetAlertsPanel } from '../components/UpsetAlertsPanel';
+import { usePlayoffLive } from '../context/PlayoffLiveContext';
 import { winnerMapFromQuickResult } from '../utils/bracketResolve';
+import { buildSeriesOverlaysForBracket } from '../utils/mergeBracketWithLive';
+import { explainOddsShift } from '../utils/probabilities';
+import { buildWinnersMap, resolvePlayoffEntry } from '../utils/seriesTracking';
 import {
   buildSimulationExplanation,
-  runMonteCarlo,
+  runMonteCarloFromLiveBracket,
   simulateBracket,
   summarizeQuickRunForDisplay,
 } from '../utils/simulation';
@@ -28,39 +32,69 @@ function HowPredictorWorks() {
       </h2>
       <ul style={{ margin: 0, paddingLeft: '1.2rem', fontSize: '0.92rem' }} className="muted">
         <li>
-          This is a <strong>for-fun bracket toy</strong>, not an official NHL prediction. Team strength numbers are
-          saved with the app—the picker does not fetch live stats when you run it.
+          <strong>Live layer:</strong> scores and game states come from the NHL’s public schedule feed (proxied
+          same-origin). If the feed fails, the app shows cached data, then falls back to the bracket seed file.
         </li>
         <li>
-          Each club gets a strength score from things like scoring-chance share, goals for and against, special
-          teams, goaltending, late-season results, and playoff experience.
+          <strong>Local math:</strong> pre-game and in-series win percentages are computed in your browser from the
+          saved advanced stat profile plus completed games merged into the bracket—no cloud “AI” service.
         </li>
         <li>
-          Every series rolls the dice with the better team more likely to win, but not guaranteed—underdogs can
-          still steal one.
+          Each full bracket run respects current series wins (e.g. 2–1) before simulating the rest—nothing resets to
+          0–0.
         </li>
         <li>
-          Run it once for a single story, or run it many times and average the outcomes to see which teams show up
-          most often.
+          Monte Carlo mode averages thousands of full playoff runs from that same state for cup and round odds.
         </li>
         <li>
-          The short “hello from near…” line on this page uses a general-area lookup from your connection; it does
-          not change the bracket math.
+          The short “hello from near…” line uses a general-area lookup from your connection; it does not change the
+          bracket math.
         </li>
       </ul>
     </section>
   );
 }
 
+function dataStatusMessage(source: string, usedFallback: boolean, error: string | null): string {
+  if (source === 'live' && !usedFallback) return 'Live NHL schedule';
+  if (source === 'cached') return 'Live data unavailable — showing cached playoff data';
+  if (error && usedFallback) return 'Live data unavailable — using seeded bracket until the feed returns';
+  return 'Using seeded fallback data';
+}
+
 export function PlayoffsBracketPage() {
   const { state, setPlayoffPredictor } = usePersistence();
   const pp = state.playoffPredictor;
 
-  const seriesById = useMemo(() => getSeriesById2026(), []);
+  const { bracket, liveGames, liveIndex, source, fetchedAt, error, usedFallback, refresh, loading } =
+    usePlayoffLive();
+
+  const seriesById = useMemo(() => getSeriesByIdFromBracket(bracket), [bracket]);
+
+  const liveOverlayBySeriesId = useMemo(
+    () => buildSeriesOverlaysForBracket(bracket, liveIndex, source, PLAYOFF_TEAM_ENTRY_BY_SLUG),
+    [bracket, liveIndex, source],
+  );
+
   const franchiseBySlug = useMemo(
     () => new Map(FRANCHISES.map((f) => [f.slug, f])),
     [],
   );
+
+  const oddsExplainSnippets = useMemo(() => {
+    const winners = buildWinnersMap(bracket, PLAYOFF_TEAM_ENTRY_BY_SLUG);
+    const out: { id: string; text: string }[] = [];
+    for (const r of bracket.rounds) {
+      for (const s of r.series) {
+        const h = resolvePlayoffEntry(s.home, winners, PLAYOFF_TEAM_ENTRY_BY_SLUG) ?? undefined;
+        const a = resolvePlayoffEntry(s.away, winners, PLAYOFF_TEAM_ENTRY_BY_SLUG) ?? undefined;
+        if (!s.mostRecentGame?.isFinal || !h || !a) continue;
+        out.push({ id: s.id, text: explainOddsShift(s, h, a, PLAYOFF_TEAM_STATS_2026) });
+        if (out.length >= 5) return out;
+      }
+    }
+    return out;
+  }, [bracket]);
 
   const [quickResult, setQuickResult] = useState<QuickSimResult | null>(null);
   const [mcSummary, setMcSummary] = useState<MonteCarloSummary | null>(null);
@@ -87,7 +121,7 @@ export function PlayoffsBracketPage() {
   const runQuick = useCallback(() => {
     const rng = Math.random;
     const result = simulateBracket(
-      PLAYOFF_BRACKET_2026,
+      bracket,
       seriesById,
       PLAYOFF_TEAM_STATS_2026,
       DEFAULT_SIMULATION_WEIGHTS,
@@ -97,15 +131,15 @@ export function PlayoffsBracketPage() {
     setPlayoffPredictor({
       simulationCount: state.playoffPredictor.simulationCount + 1,
     });
-  }, [seriesById, setPlayoffPredictor, state.playoffPredictor.simulationCount]);
+  }, [bracket, seriesById, setPlayoffPredictor, state.playoffPredictor.simulationCount]);
 
   const runMonte = useCallback(() => {
     setMcRunning(true);
     const it = Math.max(500, Math.min(10_000, pp.monteCarloIterations));
     const rng = Math.random;
     window.setTimeout(() => {
-      const summary = runMonteCarlo(
-        PLAYOFF_BRACKET_2026,
+      const summary = runMonteCarloFromLiveBracket(
+        bracket,
         seriesById,
         PLAYOFF_TEAM_STATS_2026,
         DEFAULT_SIMULATION_WEIGHTS,
@@ -119,6 +153,7 @@ export function PlayoffsBracketPage() {
       setMcRunning(false);
     }, 0);
   }, [
+    bracket,
     seriesById,
     pp.monteCarloIterations,
     setPlayoffPredictor,
@@ -141,17 +176,60 @@ export function PlayoffsBracketPage() {
     return pool.reduce((a, b) => (a.cupPct < b.cupPct ? a : b));
   }, [mcSummary]);
 
+  const lastUpdatedLabel = fetchedAt
+    ? new Date(fetchedAt).toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      })
+    : '—';
+
+  const recentFinals = useMemo(
+    () => liveGames.filter((g) => g.state === 'final').slice(-8),
+    [liveGames],
+  );
+
   return (
     <div className="playoffs-bracket-page">
       <div className="page-hero">
-        <h1>{PLAYOFF_BRACKET_2026.title}</h1>
+        <h1>{bracket.title}</h1>
         <p className="lede">
-          Bracket for the <strong>{PLAYOFF_BRACKET_2026.seasonLabel}</strong> season, saved right inside this app.
-          Nothing here phones home for scores or updates. Use the buttons below to play out the playoffs with a
-          lighthearted, stats-based picker—rerun anytime for a different winner.
+          Live tracker and local bracket math for the <strong>{bracket.seasonLabel}</strong> Stanley Cup Playoffs.
+          Scores sync from the public NHL schedule when available; win probabilities and simulations stay on your
+          device.
         </p>
         <VisitorRegionNote style={{ marginTop: '0.65rem', maxWidth: '42rem' }} />
       </div>
+
+      <section className="card card-pad" style={{ marginBottom: '1rem' }}>
+        <div className="playoffs-live-status-row">
+          <div>
+            <h2 className="display" style={{ fontSize: '1.1rem', margin: '0 0 0.25rem' }}>
+              Live schedule sync
+            </h2>
+            <p className="muted" style={{ margin: 0, fontSize: '0.88rem' }}>
+              Last updated: <strong>{lastUpdatedLabel}</strong>
+              {loading ? ' · updating…' : null}
+            </p>
+            <p className="muted" style={{ margin: '0.35rem 0 0', fontSize: '0.85rem' }}>
+              {dataStatusMessage(source, usedFallback, error)}{error && usedFallback ? ` (${error})` : null}
+            </p>
+          </div>
+          <div className="playoffs-live-status-actions">
+            <button type="button" className="btn" onClick={() => void refresh()} disabled={loading}>
+              Refresh now
+            </button>
+            <label className="playoffs-auto-refresh-label">
+              <input
+                type="checkbox"
+                checked={pp.playoffLiveAutoRefresh !== false}
+                onChange={(e) => setPlayoffPredictor({ playoffLiveAutoRefresh: e.target.checked })}
+              />
+              Auto-refresh while games are live (~45s)
+            </label>
+          </div>
+        </div>
+        <LiveScoreStrip games={liveGames} />
+      </section>
 
       <section className="card card-pad" style={{ marginBottom: '1rem' }}>
         <h2 className="display" style={{ fontSize: '1.2rem', margin: '0 0 0.75rem' }}>
@@ -294,53 +372,7 @@ export function PlayoffsBracketPage() {
               in about {darkHorse.cupPct.toFixed(1)}% of wins in this batch
             </p>
           ) : null}
-          <div style={{ overflowX: 'auto' }}>
-            <table
-              className="playoffs-odds-table"
-              style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' }}
-            >
-              <thead>
-                <tr style={{ textAlign: 'left', background: 'var(--surface-2)' }}>
-                  <th style={{ padding: '0.5rem' }}>Team</th>
-                  <th style={{ padding: '0.5rem' }}>Win the Cup</th>
-                  <th style={{ padding: '0.5rem' }}>Reach the Final</th>
-                  <th style={{ padding: '0.5rem' }}>Reach conference final</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mcSummary.teams.map((t) => (
-                  <tr key={t.franchiseSlug} style={{ borderTop: '1px solid var(--border)' }}>
-                    <td style={{ padding: '0.45rem 0.5rem' }}>{t.displayName}</td>
-                    <td style={{ padding: '0.45rem 0.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                        <div
-                          style={{
-                            flex: 1,
-                            maxWidth: '120px',
-                            height: '8px',
-                            background: 'var(--surface-2)',
-                            borderRadius: '4px',
-                            overflow: 'hidden',
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: `${Math.min(100, t.cupPct)}%`,
-                              height: '100%',
-                              background: 'var(--link)',
-                            }}
-                          />
-                        </div>
-                        <span>{t.cupPct.toFixed(1)}</span>
-                      </div>
-                    </td>
-                    <td style={{ padding: '0.45rem 0.5rem' }}>{t.finalPct.toFixed(1)}</td>
-                    <td style={{ padding: '0.45rem 0.5rem' }}>{t.conferenceFinalPct.toFixed(1)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <TeamOddsTable mcSummary={mcSummary} franchiseBySlug={franchiseBySlug} />
         </section>
       ) : null}
 
@@ -376,13 +408,54 @@ export function PlayoffsBracketPage() {
         </section>
       ) : null}
 
+      {oddsExplainSnippets.length > 0 ? (
+        <section className="card card-pad" style={{ marginBottom: '1rem' }}>
+          <h2 className="display" style={{ fontSize: '1.1rem', margin: '0 0 0.5rem' }}>
+            Why the lines moved (template notes)
+          </h2>
+          <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.9rem' }} className="muted">
+            {oddsExplainSnippets.map((x) => (
+              <li key={x.id} style={{ marginBottom: '0.45rem' }}>
+                {x.text}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      <UpsetAlertsPanel bracket={bracket} teamEntryBySlug={PLAYOFF_TEAM_ENTRY_BY_SLUG} />
+
+      {recentFinals.length > 0 ? (
+        <section className="card card-pad" style={{ marginBottom: '1rem' }}>
+          <h2 className="display" style={{ fontSize: '1.1rem', margin: '0 0 0.35rem' }}>
+            Most recent finals on the feed
+          </h2>
+          <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.88rem' }}>
+            {recentFinals.map((g) => (
+              <li key={g.gamePk}>
+                {g.awayAbbr} {g.awayScore} @ {g.homeAbbr} {g.homeScore}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      <PredictionSummary
+        quick={quickResult}
+        monte={mcSummary}
+        darkHorseDisplayName={
+          darkHorse ? franchiseBySlug.get(darkHorse.franchiseSlug)?.currentDisplayName : null
+        }
+      />
+
       <PlayoffBracketView
-        bracket={PLAYOFF_BRACKET_2026}
+        bracket={bracket}
         franchiseBySlug={franchiseBySlug}
         statsBySlug={PLAYOFF_TEAM_STATS_2026}
         winnerBySeries={winnerBySeries}
         simResultsBySeriesId={simResultsBySeriesId}
         teamColorAccent={pp.bracketAutoTheme}
+        liveOverlayBySeriesId={liveOverlayBySeriesId}
       />
 
       <div className="field" style={{ marginTop: '1rem' }}>

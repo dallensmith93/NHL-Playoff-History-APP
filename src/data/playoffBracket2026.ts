@@ -469,3 +469,8 @@ export function getAllSeries2026(): PlayoffSeries[] {
 export function getSeriesById2026(): Map<string, PlayoffSeries> {
   return new Map(getAllSeries2026().map((s) => [s.id, s]));
 }
+
+/** Series map from any bracket instance (e.g. live-merged). */
+export function getSeriesByIdFromBracket(bracket: PlayoffBracket): Map<string, PlayoffSeries> {
+  return new Map(bracket.rounds.flatMap((r) => r.series).map((s) => [s.id, s]));
+}

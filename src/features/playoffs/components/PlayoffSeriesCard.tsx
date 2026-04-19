@@ -7,8 +7,11 @@ import type {
   PlayoffTeamAdvancedStats,
   SimulatedSeriesResult,
 } from '../../../types/playoffs';
+import type { SeriesLiveOverlay } from '../types/liveScores';
 import { resolveBracketSide } from '../utils/bracketResolve';
+import { explainOddsShift } from '../utils/probabilities';
 import { formatSeriesScore, getProbabilityDelta } from '../utils/seriesTracking';
+import { getUpsetAlert, labelUpset } from '../utils/upsetAlerts';
 
 function statSummary(stats: PlayoffTeamAdvancedStats | undefined): string {
   if (!stats) return 'No saved stat snapshot for this team.';
@@ -128,6 +131,7 @@ export function PlayoffSeriesCard({
   statsBySlug,
   simResult,
   teamColorAccent,
+  liveOverlay,
 }: {
   series: PlayoffSeries;
   winnerBySeries: Map<string, string>;
@@ -135,6 +139,7 @@ export function PlayoffSeriesCard({
   statsBySlug: Record<string, PlayoffTeamAdvancedStats>;
   simResult?: SimulatedSeriesResult;
   teamColorAccent: boolean;
+  liveOverlay?: SeriesLiveOverlay;
 }) {
   const home = resolveBracketSide(series.home, winnerBySeries).entry;
   const away = resolveBracketSide(series.away, winnerBySeries).entry;
@@ -158,12 +163,20 @@ export function PlayoffSeriesCard({
   const cur = series.currentSeriesProbability;
   const delta = getProbabilityDelta(cur, prevPair);
 
+  const homeE = home ?? undefined;
+  const awayE = away ?? undefined;
+  const upsetKind = getUpsetAlert(series, series.preSeriesProbability, series.mostRecentGame, homeE, awayE);
+  const upsetLabel = labelUpset(upsetKind);
+
   const ha = home?.abbr ?? '—';
   const aa = away?.abbr ?? '—';
   const bothKnown = !!(home && away);
 
   const arrowA = delta.teamA > 0.35 ? '↑' : delta.teamA < -0.35 ? '↓' : '';
   const arrowB = delta.teamB > 0.35 ? '↑' : delta.teamB < -0.35 ? '↓' : '';
+  const showDelta = hist.length >= 2;
+  const deltaAStr = showDelta && Math.abs(delta.teamA) >= 0.25 ? `${delta.teamA > 0 ? '+' : ''}${delta.teamA.toFixed(0)}` : '';
+  const deltaBStr = showDelta && Math.abs(delta.teamB) >= 0.25 ? `${delta.teamB > 0 ? '+' : ''}${delta.teamB.toFixed(0)}` : '';
 
   const scoreLine = bothKnown
     ? formatSeriesScore(series, home ?? undefined, away ?? undefined)
@@ -203,6 +216,18 @@ export function PlayoffSeriesCard({
         />
       </div>
 
+      {liveOverlay?.bracketStatusLabel === 'Live' ? (
+        <p className="playoff-live-badge-line">
+          <span className="live-score-badge live-score-badge--live">Live</span>
+        </p>
+      ) : null}
+      {liveOverlay?.primaryLine ? <p className="playoff-live-primary muted">{liveOverlay.primaryLine}</p> : null}
+      {liveOverlay?.nextGameLine ? (
+        <p className="playoff-live-next muted" style={{ fontSize: '0.82rem' }}>
+          {liveOverlay.nextGameLine}
+        </p>
+      ) : null}
+
       {bothKnown ? (
         <div className="playoff-track-compact">
           <p className="playoff-track-summary muted">{scoreLine}</p>
@@ -211,17 +236,23 @@ export function PlayoffSeriesCard({
               Last: <span className="playoff-track-last-score">{lastShort}</span>
             </p>
           ) : null}
-          <p className="playoff-track-odds" aria-label="Series win probability">
+          <p
+            className="playoff-track-odds"
+            aria-label="Series win probability"
+            title={explainOddsShift(series, homeE, awayE, statsBySlug)}
+          >
             <span
               className={`playoff-track-odds-team${arrowA === '↑' ? ' playoff-track-odds--up' : ''}${arrowA === '↓' ? ' playoff-track-odds--down' : ''}`}
             >
               {ha} {cur.teamA_pct.toFixed(0)}%{arrowA}
+              {deltaAStr ? <span className="muted"> ({deltaAStr})</span> : null}
             </span>
             <span className="playoff-track-odds-sep muted"> · </span>
             <span
               className={`playoff-track-odds-team${arrowB === '↑' ? ' playoff-track-odds--up' : ''}${arrowB === '↓' ? ' playoff-track-odds--down' : ''}`}
             >
               {aa} {cur.teamB_pct.toFixed(0)}%{arrowB}
+              {deltaBStr ? <span className="muted"> ({deltaBStr})</span> : null}
             </span>
           </p>
           <div className="playoff-track-split" role="presentation" aria-hidden>
@@ -242,8 +273,11 @@ export function PlayoffSeriesCard({
           Best of {series.winsToWin * 2 - 1} · {displayHomeWins}-{displayAwayWins}
           {simResult ? <span className="muted"> (run)</span> : null}
         </span>
-        <span className="muted">· {statusLabel}</span>
+        <span className="muted">· {liveOverlay?.bracketStatusLabel ?? statusLabel}</span>
         {simResult?.upset ? <span className="playoff-bracket-upset-badge">Upset</span> : null}
+        {upsetLabel && upsetKind !== 'none' ? (
+          <span className="playoff-bracket-upset-badge">{upsetLabel}</span>
+        ) : null}
       </div>
       {wSlug ? (
         <div className="playoff-bracket-sim-winner muted">

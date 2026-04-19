@@ -1,3 +1,17 @@
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+build
+*.tsbuildinfo
+
+# Environment & secrets (keep .env.example if you add one)
+.env
+.env.*
+!.env.example
+
 # Logs
 logs
 *.log
@@ -7,18 +21,36 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# Vite / tooling caches
+.vite
+.cache
+.parcel-cache
+.turbo
+.eslintcache
+.stylelintcache
 
-# Editor directories and files
+# Test coverage
+coverage
+*.lcov
+
+# Netlify local CLI state
+.netlify
+
+# Editor & IDEs
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Local / machine-specific
+*.local

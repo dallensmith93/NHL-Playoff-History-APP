@@ -1,6 +1,6 @@
 # NHL Franchise History (local-first)
 
-React + TypeScript + Vite app for browsing **historical NHL franchise lineages** from seeded data. Favorites, filters, compare picks, Conn Smythe UI state, theme, and per-team notes persist in **localStorage**. No backend and no live APIs at runtime.
+React + TypeScript + Vite app for browsing **historical NHL franchise lineages** from seeded data. Favorites, filters, compare picks, Conn Smythe UI state, theme, and per-team notes persist in **localStorage**. There is **no custom backend**. The optional **2026 playoffs live layer** uses the NHL’s public Stats API schedule endpoint via a **same-origin proxy** so the browser avoids CORS; all win-probability math and simulations stay **local**.
 
 ## Quick start
 
@@ -106,6 +106,7 @@ Shape: **`AppPersistedStateV1`** in `src/types/persistence.ts`:
 | `teamNotes` | `Record<franchiseId, string>` | Free-form notes per franchise. |
 | `compareA`, `compareB` | `string` (optional) | Franchise ids selected on the compare page. |
 | `connSmythe` | object | Conn Smythe UI: `search`, `franchiseId` filter (`'all'` or franchise id), `selectedWinnerId` (winner row id). |
+| `playoffPredictor` | object | Playoffs page: sim mode, Monte Carlo iteration count, favorite pick, bracket row theming, **live auto-refresh** toggle, etc. (`src/types/persistence.ts`). |
 
 Bump `STORAGE_VERSION` and extend `migrateRaw()` in `src/lib/localStorage.ts` if you make breaking changes to this shape.
 
@@ -130,6 +131,52 @@ The **About** page can download or import a smaller JSON file that is **not** th
 ## Branding note (Utah)
 
 The seed uses **Utah Mammoth** as a representative name for the post–Arizona NHL club; adjust `lineage.identities` and display names when your dataset targets a specific season or official branding.
+
+## 2026 Stanley Cup Playoffs (live + local)
+
+Routes: **`/playoffs/2026`** and **`/playoffs/2026-bracket`** (same page).
+
+### Real-time score syncing
+
+- **Browser →** `GET /nhl-stats/schedule?...` (see `src/features/playoffs/services/nhlStatsUrl.ts`).
+- **Dev:** `vite.config.ts` proxies `/nhl-stats` → `https://statsapi.web.nhl.com/api/v1` (see `rewrite`).
+- **Production (Netlify):** `netlify.toml` proxies `/nhl-stats/*` to the Stats API **before** the SPA `/* → index.html` fallback so API paths are not swallowed by the client router.
+- The parser lives in **`src/features/playoffs/services/liveScoresService.ts`**. It maps schedule + linescore into **`LivePlayoffGame`** records (state: scheduled / live / final).
+
+### Cached fallback
+
+- The latest successful response is written to **`localStorage`** (`nhl-playoff-scoreboard-v1`).
+- If the network request fails, the hook serves **cached** games; if there is no cache, it falls back to **empty feed + seeded bracket** only for that snapshot.
+
+### Seeded bracket & merge
+
+- Canonical tree: **`src/data/playoffBracket2026.ts`** (`PLAYOFF_BRACKET_2026_SEED` + enriched `PLAYOFF_BRACKET_2026`).
+- **`mergeBracketWithLive`** overlays **final** playoff games from the feed onto the seed (`src/features/playoffs/utils/mergeBracketWithLive.ts`), then **`enrichPlayoffBracketWithTracking`** recomputes series probabilities from completed games.
+- **`useLivePlayoffScores`** (`src/features/playoffs/hooks/useLivePlayoffScores.ts`) exposes the merged bracket, polls about **45s** while any game is **live** (unless auto-refresh is turned off in persisted settings).
+
+### How probabilities are computed
+
+- **Pre-series:** `calculatePreSeriesProbability` / `calculateSeriesWinProbability` use weighted advanced stats from **`src/data/playoffTeamStats2026.ts`** (`src/features/playoffs/utils/seriesTracking.ts`, `seriesProbabilityModel.ts`).
+- **After each recorded game:** `updateSeriesProbability` nudges odds using winner, margin, upset flag, and a light **leverage** factor by game number.
+- **UI explanations:** `explainOddsShift` (`src/features/playoffs/utils/probabilities.ts`) builds template sentences—no cloud LLM.
+
+### Upset alerts
+
+- **`getUpsetAlert`** (`src/features/playoffs/utils/upsetAlerts.ts`) flags underdog wins, big margins, favorites slipping under 50%, etc., for badges on series cards and the upset panel.
+
+### Champion picker & Monte Carlo
+
+- **`simulateBracket`** / **`runMonteCarlo`** / **`runMonteCarloFromLiveBracket`** (`src/features/playoffs/utils/simulation.ts`) run entirely in the browser. They **honor current series wins** from the merged bracket before simulating unfinished rounds.
+
+### Shareable predictions
+
+- **`exportPredictionSummary`** (`src/features/playoffs/utils/sharePredictions.ts`) returns plain text for clipboard copy (see **Share** card on the playoffs page).
+
+### Updating for a future playoffs year
+
+1. Copy/adjust **`playoffBracket2026.ts`**, team stats, and (if needed) the rolling window in **`getDefaultScheduleWindow()`** in **`liveScoresService.ts`**.
+2. Point the proxy/Netlify path at the same Stats API pattern (or swap the adapter in **`liveScoresService.ts`** if the NHL changes endpoints).
+3. Optionally add new persisted keys under **`playoffPredictor`** in **`src/types/persistence.ts`**.
 
 ## Tech stack
 

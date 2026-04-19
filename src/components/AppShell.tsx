@@ -33,7 +33,7 @@ export function AppShell() {
             <NavLink className="nav-link" to="/conn-smythe">
               Conn Smythe
             </NavLink>
-            <NavLink className="nav-link" to="/playoffs/2026-bracket">
+            <NavLink className="nav-link" to="/playoffs/2026">
               Playoffs ’26
             </NavLink>
             <NavLink className="nav-link" to="/compare">

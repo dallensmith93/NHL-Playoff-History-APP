@@ -1269,6 +1269,90 @@ h3,
   transition: height 0.25s ease;
 }
 
+.playoffs-live-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.playoffs-live-status-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.playoffs-auto-refresh-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.live-score-strip-inner {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.live-score-pill {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+
+.live-score-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.12rem 0.35rem;
+  border-radius: 3px;
+  background: var(--muted);
+  color: var(--surface-1);
+}
+
+.live-score-badge--live {
+  background: #1a7f37;
+  color: #fff;
+}
+
+.live-score-badge--soon {
+  background: color-mix(in srgb, var(--link) 75%, var(--surface-2));
+  color: var(--surface-1);
+}
+
+.live-score-badge--unknown {
+  background: color-mix(in srgb, var(--muted) 55%, var(--surface-2));
+  color: var(--surface-1);
+}
+
+.live-score-detail {
+  font-size: 0.75rem;
+  max-width: 9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playoff-live-primary,
+.playoff-live-next,
+.playoff-live-badge-line {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+}
+
 @media (max-width: 720px) {
   .playoff-bracket-row {
     flex-direction: column;

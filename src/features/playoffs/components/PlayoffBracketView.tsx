@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { Franchise } from '../../../types/models';
 import type { PlayoffBracket, PlayoffTeamAdvancedStats, SimulatedSeriesResult } from '../../../types/playoffs';
+import type { SeriesLiveOverlay } from '../types/liveScores';
 import { BracketConnector } from './BracketConnector';
 import { PlayoffSeriesCard } from './PlayoffSeriesCard';
 
@@ -31,6 +32,7 @@ export function PlayoffBracketView({
   winnerBySeries,
   simResultsBySeriesId,
   teamColorAccent,
+  liveOverlayBySeriesId,
 }: {
   bracket: PlayoffBracket;
   franchiseBySlug: Map<string, Franchise>;
@@ -38,6 +40,7 @@ export function PlayoffBracketView({
   winnerBySeries: Map<string, string>;
   simResultsBySeriesId: Map<string, SimulatedSeriesResult>;
   teamColorAccent: boolean;
+  liveOverlayBySeriesId?: Map<string, SeriesLiveOverlay>;
 }) {
   const { eastR1, eastR2, westR1, westR2, eastCf, westCf, finalSeries } = useMemo(
     () => sliceBracketRounds(bracket),
@@ -59,8 +62,8 @@ export function PlayoffBracketView({
         {bracket.seasonLabel} season · {bracket.playoffYear} playoffs
       </h2>
       <p className="muted playoff-bracket-hint">
-        Box scores and odds come from the app’s saved data (edit the bracket seed file to update). Hover a team row
-        for stat details.
+        Series odds use the app’s saved regular-season profile and any completed games merged from the live schedule
+        when available. Hover a probability line for a short template explanation; hover a team row for stat detail.
       </p>
 
       {missingLayout ? (
@@ -80,6 +83,7 @@ export function PlayoffBracketView({
                       key={s.id}
                       series={s}
                       simResult={simResultsBySeriesId.get(s.id)}
+                      liveOverlay={liveOverlayBySeriesId?.get(s.id)}
                       {...cardProps}
                     />
                   ))}
@@ -91,6 +95,7 @@ export function PlayoffBracketView({
                       key={s.id}
                       series={s}
                       simResult={simResultsBySeriesId.get(s.id)}
+                      liveOverlay={liveOverlayBySeriesId?.get(s.id)}
                       {...cardProps}
                     />
                   ))}
@@ -100,6 +105,7 @@ export function PlayoffBracketView({
                   <PlayoffSeriesCard
                     series={eastCf!}
                     simResult={simResultsBySeriesId.get(eastCf!.id)}
+                    liveOverlay={liveOverlayBySeriesId?.get(eastCf!.id)}
                     {...cardProps}
                   />
                 </div>
@@ -116,6 +122,7 @@ export function PlayoffBracketView({
                 <PlayoffSeriesCard
                   series={finalSeries!}
                   simResult={simResultsBySeriesId.get(finalSeries!.id)}
+                  liveOverlay={liveOverlayBySeriesId?.get(finalSeries!.id)}
                   {...cardProps}
                 />
               </div>
@@ -132,6 +139,7 @@ export function PlayoffBracketView({
                   <PlayoffSeriesCard
                     series={westCf!}
                     simResult={simResultsBySeriesId.get(westCf!.id)}
+                    liveOverlay={liveOverlayBySeriesId?.get(westCf!.id)}
                     {...cardProps}
                   />
                 </div>
@@ -142,6 +150,7 @@ export function PlayoffBracketView({
                       key={s.id}
                       series={s}
                       simResult={simResultsBySeriesId.get(s.id)}
+                      liveOverlay={liveOverlayBySeriesId?.get(s.id)}
                       {...cardProps}
                     />
                   ))}
@@ -153,6 +162,7 @@ export function PlayoffBracketView({
                       key={s.id}
                       series={s}
                       simResult={simResultsBySeriesId.get(s.id)}
+                      liveOverlay={liveOverlayBySeriesId?.get(s.id)}
                       {...cardProps}
                     />
                   ))}

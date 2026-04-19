@@ -48,7 +48,9 @@ export function updateSeriesProbability(
   const favoriteWasA = pre.teamA_pct >= pre.teamB_pct;
   const upset = (favoriteWasA && !winnerIsA) || (!favoriteWasA && winnerIsA);
   const upsetMult = upset ? 1.18 : 1;
-  const winBump = 0.065 * blowout * upsetMult;
+  /** Later games move odds a bit more than Game 1. */
+  const leverage = 0.88 + Math.min(7, Math.max(1, game.gameNumber)) * 0.017;
+  const winBump = 0.065 * blowout * upsetMult * leverage;
   if (winnerIsA) {
     a = Math.min(0.95, a + winBump);
     b = 1 - a;

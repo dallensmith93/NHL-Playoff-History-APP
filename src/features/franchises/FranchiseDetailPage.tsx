@@ -21,10 +21,9 @@ import { formatIdentityTransition } from '../../lib/identityLabels';
 import { validateFranchise } from '../../lib/franchiseValidation';
 import type { Franchise } from '../../types/models';
 import type { PlayoffTeamEntry } from '../../types/playoffs';
-import {
-  PLAYOFF_BRACKET_2026,
-  PLAYOFF_TEAM_ENTRY_BY_SLUG,
-} from '../../data/playoffBracket2026';
+import { PLAYOFF_TEAM_ENTRY_BY_SLUG } from '../../data/playoffBracket2026';
+import { usePlayoffLive } from '../playoffs/context/PlayoffLiveContext';
+import { buildSeriesLiveOverlay } from '../playoffs/utils/mergeBracketWithLive';
 import {
   buildWinnersMap,
   findSeriesForFranchiseSlug,
@@ -84,15 +83,24 @@ export function FranchiseDetailPage() {
     return [...getConnSmytheForFranchise(franchise.id)].sort((a, b) => b.year - a.year);
   }, [franchise]);
 
+  const { bracket: playoffBracket2026, liveIndex, source, fetchedAt } = usePlayoffLive();
+
   const winners2026 = useMemo(
-    () => buildWinnersMap(PLAYOFF_BRACKET_2026, PLAYOFF_TEAM_ENTRY_BY_SLUG),
-    [],
+    () => buildWinnersMap(playoffBracket2026, PLAYOFF_TEAM_ENTRY_BY_SLUG),
+    [playoffBracket2026],
   );
 
   const playoff2026Series = useMemo(() => {
     if (!franchise) return undefined;
-    return findSeriesForFranchiseSlug(PLAYOFF_BRACKET_2026, franchise.slug, PLAYOFF_TEAM_ENTRY_BY_SLUG);
-  }, [franchise]);
+    return findSeriesForFranchiseSlug(playoffBracket2026, franchise.slug, PLAYOFF_TEAM_ENTRY_BY_SLUG);
+  }, [franchise, playoffBracket2026]);
+
+  const playoff2026SeriesOverlay = useMemo(() => {
+    if (!playoff2026Series) return undefined;
+    const home = resolvePlayoffEntry(playoff2026Series.home, winners2026, PLAYOFF_TEAM_ENTRY_BY_SLUG) ?? undefined;
+    const away = resolvePlayoffEntry(playoff2026Series.away, winners2026, PLAYOFF_TEAM_ENTRY_BY_SLUG) ?? undefined;
+    return buildSeriesLiveOverlay(playoff2026Series, home, away, liveIndex, source);
+  }, [playoff2026Series, winners2026, liveIndex, source]);
 
   const playoff2026Sides = useMemo((): {
     home: PlayoffTeamEntry | null;
@@ -337,13 +345,23 @@ export function FranchiseDetailPage() {
       {playoff2026Series ? (
         <div className="card card-pad playoff-franchise-tracker" style={{ marginBottom: '1rem' }}>
           <h3 className="display" style={{ margin: '0 0 0.35rem' }}>
-            2026 Stanley Cup Playoffs (local tracker)
+            2026 Stanley Cup Playoffs
           </h3>
           <p className="muted" style={{ margin: '0 0 0.75rem', fontSize: '0.9rem' }}>
-            Box scores and win odds are seeded in the app—there is no live NHL connection.
+            Schedule layer: {source === 'live' ? 'live NHL feed' : source === 'cached' ? 'cached schedule' : 'seeded data'}
+            {fetchedAt ? ` · last sync ${new Date(fetchedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}` : null}.
+            Win odds combine saved team priors with any completed games merged into the bracket.
           </p>
+          {playoff2026SeriesOverlay?.primaryLine ? (
+            <p style={{ margin: '0 0 0.5rem', fontWeight: 600 }}>{playoff2026SeriesOverlay.primaryLine}</p>
+          ) : null}
+          {playoff2026SeriesOverlay?.nextGameLine ? (
+            <p className="muted" style={{ margin: '0 0 0.5rem', fontSize: '0.88rem' }}>
+              {playoff2026SeriesOverlay.nextGameLine}
+            </p>
+          ) : null}
           <p style={{ margin: '0 0 0.35rem' }}>
-            <Link to="/playoffs/2026-bracket">Open full bracket</Link>
+            <Link to="/playoffs/2026">Open full bracket</Link>
           </p>
           <p style={{ margin: '0 0 0.5rem' }}>
             <span className="muted">Series: </span>
@@ -377,6 +395,23 @@ export function FranchiseDetailPage() {
               )}
             </p>
           ) : null}
+          <p style={{ margin: '0 0 0.35rem' }}>
+            <span className="muted">Round: </span>
+            {playoff2026Series.roundLabel}
+          </p>
+          {playoff2026Series.status === 'complete' ? (
+            <p style={{ margin: '0 0 0.5rem', fontSize: '0.9rem' }}>
+              {playoff2026Series.winnerFranchiseSlug === franchise.slug ? (
+                <span className="muted">Series result: advanced.</span>
+              ) : (
+                <span className="muted">Series result: eliminated in this round.</span>
+              )}
+            </p>
+          ) : (
+            <p style={{ margin: '0 0 0.5rem', fontSize: '0.9rem' }} className="muted">
+              Series open — see the bracket for the full path to the Cup.
+            </p>
+          )}
           <p style={{ margin: '0 0 0.35rem' }}>
             <span className="muted">Win probability (model + games): </span>
             {playoff2026Sides.home?.abbr ?? '—'} {playoff2026Series.currentSeriesProbability.teamA_pct.toFixed(0)}% ·{' '}

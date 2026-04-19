@@ -39,6 +39,8 @@ export interface PlayoffPredictorPersistedState {
   favoritePredictedTeamSlug?: string;
   /** When true, bracket cards prefer team primary colors more aggressively. */
   bracketAutoTheme: boolean;
+  /** Poll live scores while any playoff game is in progress (saves bandwidth when off). */
+  playoffLiveAutoRefresh: boolean;
   /** Last series card focused on the 2026 bracket (local UI only). */
   lastViewedPlayoffSeriesId?: string;
 }
@@ -79,5 +81,6 @@ export const defaultPersistedStateV1: AppPersistedStateV1 = {
     monteCarloIterations: 2000,
     simulationCount: 0,
     bracketAutoTheme: true,
+    playoffLiveAutoRefresh: true,
   },
 };

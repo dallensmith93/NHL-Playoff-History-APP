@@ -325,6 +325,9 @@ export function runMonteCarlo(
   };
 }
 
+/** Alias: Monte Carlo using whatever bracket state you pass (including live-merged). */
+export const runMonteCarloFromLiveBracket = runMonteCarlo;
+
 function avgStat(
   slugs: string[],
   stats: Record<string, PlayoffTeamAdvancedStats>,

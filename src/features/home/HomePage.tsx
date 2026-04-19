@@ -63,7 +63,7 @@ export function HomePage() {
         </p>
         <VisitorRegionNote style={{ marginTop: '0.65rem', maxWidth: '40rem' }} />
         <p className="home-hero-lede" style={{ marginTop: '0.75rem' }}>
-          <Link to="/playoffs/2026-bracket">2026 playoffs bracket &amp; champion picker →</Link>
+          <Link to="/playoffs/2026">2026 playoffs bracket &amp; champion picker →</Link>
         </p>
       </header>
 
