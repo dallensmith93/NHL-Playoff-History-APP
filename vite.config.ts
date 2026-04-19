@@ -3,10 +3,8 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
 /**
- * Vite's dev proxy uses Node to resolve upstream hostnames. A broken ISP / captive portal /
- * VPN DNS can yield `getaddrinfo ENOTFOUND statsapi.web.nhl.com` even though the browser works.
- * Default to public resolvers; opt out with `VITE_NHL_DNS_SERVERS=off` or set custom servers
- * (comma-separated), e.g. `VITE_NHL_DNS_SERVERS=1.1.1.1,8.8.8.8`.
+ * Dev proxy uses Node for DNS. Broken ISP/VPN DNS can cause `ENOTFOUND` for proxied hosts.
+ * Opt out with `VITE_NHL_DNS_SERVERS=off` or set comma-separated resolvers.
  */
 if (process.env.VITE_NHL_DNS_SERVERS !== 'off') {
   const custom = (process.env.VITE_NHL_DNS_SERVERS ?? '')
@@ -20,12 +18,6 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/nhl-stats': {
-        target: 'https://statsapi.web.nhl.com',
-        changeOrigin: true,
-        rewrite: (path: string) => path.replace(/^\/nhl-stats/, '/api/v1'),
-        secure: false,
-      },
       '/nhle-web': {
         target: 'https://api-web.nhle.com',
         changeOrigin: true,
@@ -36,12 +28,6 @@ export default defineConfig({
   },
   preview: {
     proxy: {
-      '/nhl-stats': {
-        target: 'https://statsapi.web.nhl.com',
-        changeOrigin: true,
-        rewrite: (path: string) => path.replace(/^\/nhl-stats/, '/api/v1'),
-        secure: false,
-      },
       '/nhle-web': {
         target: 'https://api-web.nhle.com',
         changeOrigin: true,

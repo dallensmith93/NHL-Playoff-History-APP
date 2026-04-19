@@ -1185,10 +1185,17 @@ h3,
 }
 
 .playoff-track-summary,
-.playoff-track-last {
+.playoff-track-last,
+.playoff-track-final-score {
   margin: 0;
   font-size: 0.68rem;
   line-height: 1.35;
+}
+
+.playoff-track-final-score {
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--text);
 }
 
 .playoff-track-last {

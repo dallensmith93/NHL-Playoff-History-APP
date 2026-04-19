@@ -14,9 +14,18 @@ import { fetchPlayoffScoreboard, getDefaultScheduleWindow } from '../services/li
 import type { LivePlayoffGame, LiveDataSource } from '../types/liveScores';
 import { mergeBracketWithLive, indexLiveGamesByMatchup } from '../utils/mergeBracketWithLive';
 
-const POLL_MS = 45_000;
+const POLL_MS = 30_000;
 /** Keep polling after the last "live" snapshot so we catch the switch to Final and merge series wins. */
-const POST_LIVE_POLL_MS = 5 * 60_000;
+const POST_LIVE_POLL_MS = 8 * 60_000;
+/** Extra fetch shortly after a live game is seen—API often lags when flipping Live → Final. */
+const CATCH_FINAL_FETCH_MS = 15_000;
+
+/** Include feed rows unless they are explicitly non-playoff or preseason — ambiguous rows still merge. */
+function isPlayoffRow(g: LivePlayoffGame): boolean {
+  if (g.isPlayoffGame === false) return false;
+  if (g.gameType === '1') return false;
+  return true;
+}
 
 export interface UseLivePlayoffScoresResult {
   bracket: PlayoffBracket;
@@ -51,6 +60,7 @@ export function useLivePlayoffScores(options?: {
   const abortRef = useRef<AbortController | null>(null);
   const liveGamesRef = useRef<LivePlayoffGame[]>([]);
   const pollAfterLiveUntilRef = useRef(0);
+  const catchFinalTimerRef = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     abortRef.current?.abort();
@@ -65,8 +75,24 @@ export function useLivePlayoffScores(options?: {
     });
     const games = res.games;
     setLiveGames(games);
-    if (games.some((g) => g.state === 'live')) {
+
+    if (catchFinalTimerRef.current) {
+      clearTimeout(catchFinalTimerRef.current);
+      catchFinalTimerRef.current = null;
+    }
+    const livePlayoff = games.filter(isPlayoffRow);
+    if (livePlayoff.some((g) => g.state === 'live')) {
       pollAfterLiveUntilRef.current = Date.now() + POST_LIVE_POLL_MS;
+      catchFinalTimerRef.current = window.setTimeout(() => {
+        catchFinalTimerRef.current = null;
+        void load();
+      }, CATCH_FINAL_FETCH_MS);
+    }
+    if (livePlayoff.some((g) => g.state === 'unknown')) {
+      pollAfterLiveUntilRef.current = Math.max(
+        pollAfterLiveUntilRef.current,
+        Date.now() + 3 * 60_000,
+      );
     }
     setSource(res.source);
     setFetchedAt(res.fetchedAt);
@@ -79,14 +105,13 @@ export function useLivePlayoffScores(options?: {
     void load();
   }, [load]);
 
-  const playoffGames = useMemo(() => {
-    return liveGames.filter((g) => {
-      if (g.isPlayoffGame === true) return true;
-      if (g.isPlayoffGame === false) return false;
-      // Legacy cached rows before `isPlayoffGame` existed
-      return g.gameType === '3' || g.gameType === 'P';
-    });
-  }, [liveGames]);
+  useEffect(() => {
+    return () => {
+      if (catchFinalTimerRef.current) clearTimeout(catchFinalTimerRef.current);
+    };
+  }, []);
+
+  const playoffGames = useMemo(() => liveGames.filter(isPlayoffRow), [liveGames]);
 
   useEffect(() => {
     liveGamesRef.current = liveGames;
@@ -96,7 +121,8 @@ export function useLivePlayoffScores(options?: {
     if (options?.pollDisabled) return;
     const id = window.setInterval(() => {
       const games = liveGamesRef.current;
-      const hasLiveNow = games.some((g) => g.state === 'live');
+      const playoff = games.filter(isPlayoffRow);
+      const hasLiveNow = playoff.some((g) => g.state === 'live');
       const keepPolling = hasLiveNow || Date.now() < pollAfterLiveUntilRef.current;
       if (!keepPolling) return;
       void load();

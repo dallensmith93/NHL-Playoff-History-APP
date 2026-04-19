@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import { usePersistence } from '../../../app/persistence';
 import { FRANCHISES } from '../../../data/franchises';
 import { getSeriesByIdFromBracket, PLAYOFF_TEAM_ENTRY_BY_SLUG } from '../../../data/playoffBracket2026';
@@ -13,7 +13,6 @@ import { PredictionSummary } from '../components/PredictionSummary';
 import { TeamOddsTable } from '../components/TeamOddsTable';
 import { UpsetAlertsPanel } from '../components/UpsetAlertsPanel';
 import { usePlayoffLive } from '../context/PlayoffLiveContext';
-import { winnerMapFromQuickResult } from '../utils/bracketResolve';
 import { buildSeriesOverlaysForBracket } from '../utils/mergeBracketWithLive';
 import { explainOddsShift } from '../utils/probabilities';
 import { buildWinnersMap, resolvePlayoffEntry } from '../utils/seriesTracking';
@@ -81,30 +80,65 @@ export function PlayoffsBracketPage() {
     [],
   );
 
-  const oddsExplainSnippets = useMemo(() => {
-    const winners = buildWinnersMap(bracket, PLAYOFF_TEAM_ENTRY_BY_SLUG);
-    const out: { id: string; text: string }[] = [];
-    for (const r of bracket.rounds) {
-      for (const s of r.series) {
-        const h = resolvePlayoffEntry(s.home, winners, PLAYOFF_TEAM_ENTRY_BY_SLUG) ?? undefined;
-        const a = resolvePlayoffEntry(s.away, winners, PLAYOFF_TEAM_ENTRY_BY_SLUG) ?? undefined;
-        if (!s.mostRecentGame?.isFinal || !h || !a) continue;
-        out.push({ id: s.id, text: explainOddsShift(s, h, a, PLAYOFF_TEAM_STATS_2026) });
-        if (out.length >= 5) return out;
-      }
-    }
-    return out;
-  }, [bracket]);
-
   const [quickResult, setQuickResult] = useState<QuickSimResult | null>(null);
   const [mcSummary, setMcSummary] = useState<MonteCarloSummary | null>(null);
 
   const [mcRunning, setMcRunning] = useState(false);
 
+  /** When live merge changes scores/results, drop stale one-off / Monte runs so the page reflects the feed. */
+  const liveDataRevision = useMemo(
+    () =>
+      bracket.seriesOrder
+        .map((id) => {
+          const s = seriesById.get(id);
+          if (!s) return '';
+          const mg = s.mostRecentGame;
+          return `${id}:${s.homeWins}-${s.awayWins}:${s.games?.length ?? 0}:${mg?.date ?? ''}:${mg?.gameNumber ?? 0}:${mg?.isFinal ? '1' : '0'}`;
+        })
+        .join('|'),
+    [bracket, seriesById],
+  );
+
+  useEffect(() => {
+    setQuickResult(null);
+    setMcSummary(null);
+  }, [liveDataRevision]);
+
+  /** Live bracket winners first so `winnerOf` slots resolve without running a sim. Sim fills series not yet decided in the feed. */
+  const bracketWinnerSlugs = useMemo(
+    () => buildWinnersMap(bracket, PLAYOFF_TEAM_ENTRY_BY_SLUG),
+    [bracket],
+  );
+
+  const oddsExplainSnippets = useMemo(() => {
+    const winners = bracketWinnerSlugs;
+    const rows: { id: string; text: string; sortKey: string }[] = [];
+    for (const sid of bracket.seriesOrder) {
+      const s = seriesById.get(sid);
+      if (!s) continue;
+      const h = resolvePlayoffEntry(s.home, winners, PLAYOFF_TEAM_ENTRY_BY_SLUG) ?? undefined;
+      const a = resolvePlayoffEntry(s.away, winners, PLAYOFF_TEAM_ENTRY_BY_SLUG) ?? undefined;
+      if (!s.mostRecentGame?.isFinal || !h || !a) continue;
+      const mg = s.mostRecentGame;
+      rows.push({
+        id: s.id,
+        sortKey: `${mg.date}\u0000${String(mg.gameNumber).padStart(2, '0')}\u0000${sid}`,
+        text: explainOddsShift(s, h, a, PLAYOFF_TEAM_STATS_2026),
+      });
+    }
+    rows.sort((x, y) => (x.sortKey < y.sortKey ? 1 : x.sortKey > y.sortKey ? -1 : 0));
+    return rows.map(({ id, text }) => ({ id, text }));
+  }, [bracketWinnerSlugs, seriesById]);
+
   const winnerBySeries = useMemo(() => {
-    if (!quickResult) return new Map<string, string>();
-    return winnerMapFromQuickResult(quickResult.seriesResults);
-  }, [quickResult]);
+    const m = new Map(bracketWinnerSlugs);
+    if (quickResult) {
+      for (const r of quickResult.seriesResults) {
+        if (!m.has(r.seriesId)) m.set(r.seriesId, r.winnerSlug);
+      }
+    }
+    return m;
+  }, [bracketWinnerSlugs, quickResult]);
 
   const simResultsBySeriesId = useMemo(() => {
     const m = new Map<string, QuickSimResult['seriesResults'][0]>();
@@ -406,7 +440,7 @@ export function PlayoffsBracketPage() {
       {oddsExplainSnippets.length > 0 ? (
         <section className="card card-pad" style={{ marginBottom: '1rem' }}>
           <h2 className="display" style={{ fontSize: '1.1rem', margin: '0 0 0.5rem' }}>
-            Why the lines moved (template notes)
+            Why the lines moved (updates when games go final)
           </h2>
           <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.9rem' }} className="muted">
             {oddsExplainSnippets.map((x) => (

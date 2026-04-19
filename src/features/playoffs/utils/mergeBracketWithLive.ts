@@ -69,10 +69,11 @@ export function mergeBracketWithLive(
   teamEntryBySlug: Map<string, PlayoffTeamEntry>,
 ): PlayoffBracket {
   const liveIndex = indexLiveGamesByMatchup(liveGames);
-  const winners = buildWinnersMap(bracketSeed, teamEntryBySlug);
   const clone = structuredClone(bracketSeed) as PlayoffBracket;
 
+  // Recompute winners after each series so R2+ `from_series` slots resolve (e.g. COL–LAK) once R1 is merged from the feed.
   for (const sid of clone.seriesOrder) {
+    const winners = buildWinnersMap(clone, teamEntryBySlug);
     const s = clone.rounds.flatMap((r) => r.series).find((x) => x.id === sid);
     if (!s) continue;
     const homeE = resolvePlayoffEntry(s.home, winners, teamEntryBySlug);
@@ -86,7 +87,8 @@ export function mergeBracketWithLive(
     const finals = lg.filter(isLiveGameFinal);
     if (finals.length === 0) continue;
 
-    s.games = finals.map((g, i) => toGameResult(g, homeSlug, awaySlug, i + 1));
+    // Always mark merged feed games as final so downstream odds/UX never skips on a stray state flag.
+    s.games = finals.map((g, i) => ({ ...toGameResult(g, homeSlug, awaySlug, i + 1), isFinal: true }));
     let hw = 0;
     let aw = 0;
     for (const gr of s.games) {

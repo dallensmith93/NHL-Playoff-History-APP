@@ -143,10 +143,16 @@ export function PlayoffSeriesCard({
 }) {
   const home = resolveBracketSide(series.home, winnerBySeries).entry;
   const away = resolveBracketSide(series.away, winnerBySeries).entry;
-  const wSlug = simResult?.winnerSlug ?? winnerBySeries.get(series.id);
 
-  const displayHomeWins = simResult?.homeWins ?? series.homeWins;
-  const displayAwayWins = simResult?.awayWins ?? series.awayWins;
+  /** Merged live schedule updates `series` wins; a stale quick-sim snapshot must not mask real results. */
+  const mergedGamesPlayed = series.homeWins + series.awayWins;
+  const useMergedWins =
+    mergedGamesPlayed > 0 || series.mostRecentGame !== undefined || series.winnerFranchiseSlug !== undefined;
+  const displayHomeWins = useMergedWins ? series.homeWins : (simResult?.homeWins ?? series.homeWins);
+  const displayAwayWins = useMergedWins ? series.awayWins : (simResult?.awayWins ?? series.awayWins);
+
+  const wSlug =
+    series.winnerFranchiseSlug ?? simResult?.winnerSlug ?? winnerBySeries.get(series.id);
 
   const statusLabel =
     series.status === 'complete'
@@ -231,7 +237,15 @@ export function PlayoffSeriesCard({
       {bothKnown ? (
         <div className="playoff-track-compact">
           <p className="playoff-track-summary muted">{scoreLine}</p>
-          {lastShort ? (
+          {series.mostRecentGame?.isFinal ? (
+            <p className="playoff-track-final-score" aria-label="Most recent game final score">
+              Final
+              {series.mostRecentGame.gameNumber ? ` · Game ${series.mostRecentGame.gameNumber}` : ''}:{' '}
+              <strong>
+                {ha} {series.mostRecentGame.homeScore}–{series.mostRecentGame.awayScore} {aa}
+              </strong>
+            </p>
+          ) : lastShort ? (
             <p className="playoff-track-last muted">
               Last: <span className="playoff-track-last-score">{lastShort}</span>
             </p>
@@ -279,7 +293,7 @@ export function PlayoffSeriesCard({
           <span className="playoff-bracket-upset-badge">{upsetLabel}</span>
         ) : null}
       </div>
-      {wSlug ? (
+      {simResult && wSlug ? (
         <div className="playoff-bracket-sim-winner muted">
           Run winner: <strong>{franchiseBySlug.get(wSlug)?.currentDisplayName ?? wSlug}</strong>
         </div>

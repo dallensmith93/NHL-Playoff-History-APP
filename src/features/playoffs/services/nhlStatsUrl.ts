@@ -6,19 +6,8 @@ function useLocalViteProxy(): boolean {
 }
 
 /**
- * Browser hits same-origin NHL proxy (avoids CORS).
- * - Dev / `vite preview` on localhost: `/nhl-stats/*` → Vite proxy → statsapi.
- * - Deployed (Netlify or any host): `/.netlify/functions/nhl-stats/*` → serverless proxy (Netlify edge redirects to NHL were returning 500).
+ * NHL Web schedule/scores (`api-web.nhle.com`), same-origin via dev proxy or Netlify function.
  */
-export function nhlApiPath(path: string): string {
-  const p = path.startsWith('/') ? path.slice(1) : path;
-  if (useLocalViteProxy()) {
-    return `/nhl-stats/${p}`;
-  }
-  return `/.netlify/functions/nhl-stats/${p}`;
-}
-
-/** NHL Web schedule API (`api-web.nhle.com`) — used when Stats API schedule returns 5xx. */
 export function nhleWebPath(path: string): string {
   const p = path.startsWith('/') ? path : `/${path}`;
   if (useLocalViteProxy()) {
