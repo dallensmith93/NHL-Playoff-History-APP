@@ -23,13 +23,13 @@ export default defineConfig({
       '/nhl-stats': {
         target: 'https://statsapi.web.nhl.com',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/nhl-stats/, '/api/v1'),
+        rewrite: (path: string) => path.replace(/^\/nhl-stats/, '/api/v1'),
         secure: false,
       },
       '/nhle-web': {
         target: 'https://api-web.nhle.com',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/nhle-web/, ''),
+        rewrite: (path: string) => path.replace(/^\/nhle-web/, ''),
         secure: true,
       },
     },
@@ -39,13 +39,13 @@ export default defineConfig({
       '/nhl-stats': {
         target: 'https://statsapi.web.nhl.com',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/nhl-stats/, '/api/v1'),
+        rewrite: (path: string) => path.replace(/^\/nhl-stats/, '/api/v1'),
         secure: false,
       },
       '/nhle-web': {
         target: 'https://api-web.nhle.com',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/nhle-web/, ''),
+        rewrite: (path: string) => path.replace(/^\/nhle-web/, ''),
         secure: true,
       },
     },
