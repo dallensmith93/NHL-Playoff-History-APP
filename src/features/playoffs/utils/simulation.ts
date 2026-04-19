@@ -16,47 +16,9 @@ import type {
   SimulationWeights,
   SimulatedSeriesResult,
 } from '../../../types/playoffs';
+import { calculateSeriesWinProbability } from './seriesProbabilityModel';
 
-export function calculateTeamStrength(
-  s: PlayoffTeamAdvancedStats,
-  w: SimulationWeights,
-): number {
-  const gdN = Math.max(0, Math.min(1, (s.goalDiffPerGame + 0.85) / 1.7));
-  const xgaN = Math.max(0, Math.min(1, (3.15 - s.xGaPer60) / 1.05));
-  const spec = (s.ppPct + s.pkPct) / 2;
-  let score =
-    w.xGoalsPct * s.xGoalsPct +
-    w.goalDiffPerGame * gdN +
-    w.goalieStrength * s.goalieStrength +
-    w.specialTeams * spec +
-    w.recentForm * s.recentForm +
-    w.playoffExperience * s.playoffExperience +
-    w.corsiPct * s.corsiPct +
-    w.defenseXga * xgaN;
-  score *= s.injuryRiskModifier ?? 1;
-  return score;
-}
-
-/** Home win probability before stochastic draw. */
-export function calculateSeriesWinProbability(
-  homeSlug: string,
-  awaySlug: string,
-  statsBySlug: Record<string, PlayoffTeamAdvancedStats>,
-  weights: SimulationWeights,
-): { homeWinProb: number; strengthHome: number; strengthAway: number } {
-  const sh = statsBySlug[homeSlug];
-  const sa = statsBySlug[awaySlug];
-  if (!sh || !sa) throw new Error(`Missing stats for ${homeSlug} or ${awaySlug}`);
-  const strengthHome = calculateTeamStrength(sh, weights) + weights.homeIceBoost;
-  const strengthAway = calculateTeamStrength(sa, weights);
-  const d = strengthHome - strengthAway;
-  const homeWinProb = 1 / (1 + Math.exp(-weights.logisticK * d * 22));
-  return {
-    homeWinProb: Math.max(0.08, Math.min(0.92, homeWinProb)),
-    strengthHome,
-    strengthAway,
-  };
-}
+export { calculateTeamStrength, calculateSeriesWinProbability } from './seriesProbabilityModel';
 
 function resolveRef(
   ref: PlayoffTeamRef,
@@ -86,6 +48,15 @@ function sampleLoserWins(winsToWin: number, favoriteWinProb: number, rng: () => 
   return cap;
 }
 
+function nextGameHomeWinProbFromSeriesProb(
+  pSeriesHome: number,
+  homeWins: number,
+  awayWins: number,
+): number {
+  const leadAdj = (homeWins - awayWins) * 0.038;
+  return Math.max(0.12, Math.min(0.88, 0.5 + (pSeriesHome - 0.5) * 0.42 + leadAdj));
+}
+
 export function simulateSeries(
   series: PlayoffSeries,
   winners: Map<string, string>,
@@ -98,6 +69,69 @@ export function simulateSeries(
   if (!homeT || !awayT) {
     throw new Error(`Cannot resolve series ${series.id}`);
   }
+
+  const w = series.winsToWin;
+  if (series.homeWins >= w || series.awayWins >= w) {
+    const winHome = series.homeWins >= w;
+    const winnerSlug = winHome ? homeT.franchiseSlug : awayT.franchiseSlug;
+    const loserSlug = winHome ? awayT.franchiseSlug : homeT.franchiseSlug;
+    const { homeWinProb } = calculateSeriesWinProbability(
+      homeT.franchiseSlug,
+      awayT.franchiseSlug,
+      statsBySlug,
+      weights,
+    );
+    const favSlug = homeWinProb >= 0.5 ? homeT.franchiseSlug : awayT.franchiseSlug;
+    const favProb = homeWinProb >= 0.5 ? homeWinProb : 1 - homeWinProb;
+    return {
+      seriesId: series.id,
+      winnerSlug,
+      loserSlug,
+      homeWins: series.homeWins,
+      awayWins: series.awayWins,
+      favoriteWinProb: favProb,
+      upset: winnerSlug !== favSlug,
+    };
+  }
+
+  let hw = series.homeWins;
+  let aw = series.awayWins;
+  const liveGames = series.games?.length ?? 0;
+  const hasLiveProgress =
+    liveGames > 0 && hw < w && aw < w && series.status !== 'complete';
+
+  if (hasLiveProgress) {
+    const pSeriesHome = series.currentSeriesProbability.teamA_pct / 100;
+    const { homeWinProb: modelHome } = calculateSeriesWinProbability(
+      homeT.franchiseSlug,
+      awayT.franchiseSlug,
+      statsBySlug,
+      weights,
+    );
+    const alpha = Math.min(1, liveGames / 6);
+    const blendedSeriesHome = (1 - alpha) * modelHome + alpha * pSeriesHome;
+
+    while (hw < w && aw < w) {
+      const pG = nextGameHomeWinProbFromSeriesProb(blendedSeriesHome, hw, aw);
+      if (rng() < pG) hw++;
+      else aw++;
+    }
+    const winHome = hw >= w;
+    const winnerSlug = winHome ? homeT.franchiseSlug : awayT.franchiseSlug;
+    const loserSlug = winHome ? awayT.franchiseSlug : homeT.franchiseSlug;
+    const favSlug = modelHome >= 0.5 ? homeT.franchiseSlug : awayT.franchiseSlug;
+    const favProb = modelHome >= 0.5 ? modelHome : 1 - modelHome;
+    return {
+      seriesId: series.id,
+      winnerSlug,
+      loserSlug,
+      homeWins: hw,
+      awayWins: aw,
+      favoriteWinProb: favProb,
+      upset: winnerSlug !== favSlug,
+    };
+  }
+
   const { homeWinProb } = calculateSeriesWinProbability(
     homeT.franchiseSlug,
     awayT.franchiseSlug,
@@ -113,7 +147,6 @@ export function simulateSeries(
   const loserSlug = winHome ? awayT.franchiseSlug : homeT.franchiseSlug;
   const upset = winnerSlug !== fav.slug;
   const loserWins = sampleLoserWins(series.winsToWin, fav.prob, rng);
-  const w = series.winsToWin;
   const homeWins = winHome ? w : loserWins;
   const awayWins = winHome ? loserWins : w;
   return {

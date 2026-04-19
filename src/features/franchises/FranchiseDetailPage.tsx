@@ -20,6 +20,18 @@ import { getCurrentIdentity, hasMultipleIdentities } from '../../lib/franchiseId
 import { formatIdentityTransition } from '../../lib/identityLabels';
 import { validateFranchise } from '../../lib/franchiseValidation';
 import type { Franchise } from '../../types/models';
+import type { PlayoffTeamEntry } from '../../types/playoffs';
+import {
+  PLAYOFF_BRACKET_2026,
+  PLAYOFF_TEAM_ENTRY_BY_SLUG,
+} from '../../data/playoffBracket2026';
+import {
+  buildWinnersMap,
+  findSeriesForFranchiseSlug,
+  formatSeriesScore,
+  getLastGameSummary,
+  resolvePlayoffEntry,
+} from '../playoffs/utils/seriesTracking';
 
 export function FranchiseDetailPage() {
   const { slug } = useParams();
@@ -71,6 +83,35 @@ export function FranchiseDetailPage() {
     if (!franchise) return [];
     return [...getConnSmytheForFranchise(franchise.id)].sort((a, b) => b.year - a.year);
   }, [franchise]);
+
+  const winners2026 = useMemo(
+    () => buildWinnersMap(PLAYOFF_BRACKET_2026, PLAYOFF_TEAM_ENTRY_BY_SLUG),
+    [],
+  );
+
+  const playoff2026Series = useMemo(() => {
+    if (!franchise) return undefined;
+    return findSeriesForFranchiseSlug(PLAYOFF_BRACKET_2026, franchise.slug, PLAYOFF_TEAM_ENTRY_BY_SLUG);
+  }, [franchise]);
+
+  const playoff2026Sides = useMemo((): {
+    home: PlayoffTeamEntry | null;
+    away: PlayoffTeamEntry | null;
+  } => {
+    if (!playoff2026Series) return { home: null, away: null };
+    return {
+      home: resolvePlayoffEntry(playoff2026Series.home, winners2026, PLAYOFF_TEAM_ENTRY_BY_SLUG),
+      away: resolvePlayoffEntry(playoff2026Series.away, winners2026, PLAYOFF_TEAM_ENTRY_BY_SLUG),
+    };
+  }, [playoff2026Series, winners2026]);
+
+  const playoff2026Opponent = useMemo(() => {
+    if (!franchise || !playoff2026Series) return undefined;
+    const { home, away } = playoff2026Sides;
+    if (home?.franchiseSlug === franchise.slug) return away;
+    if (away?.franchiseSlug === franchise.slug) return home;
+    return undefined;
+  }, [franchise, playoff2026Series, playoff2026Sides]);
 
   const note = franchise ? (state.teamNotes[franchise.id] ?? '') : '';
 
@@ -292,6 +333,69 @@ export function FranchiseDetailPage() {
           </div>
         )}
       </div>
+
+      {playoff2026Series ? (
+        <div className="card card-pad playoff-franchise-tracker" style={{ marginBottom: '1rem' }}>
+          <h3 className="display" style={{ margin: '0 0 0.35rem' }}>
+            2026 Stanley Cup Playoffs (local tracker)
+          </h3>
+          <p className="muted" style={{ margin: '0 0 0.75rem', fontSize: '0.9rem' }}>
+            Box scores and win odds are seeded in the app—there is no live NHL connection.
+          </p>
+          <p style={{ margin: '0 0 0.35rem' }}>
+            <Link to="/playoffs/2026-bracket">Open full bracket</Link>
+          </p>
+          <p style={{ margin: '0 0 0.5rem' }}>
+            <span className="muted">Series: </span>
+            {playoff2026Sides.home?.abbr ?? '…'} vs {playoff2026Sides.away?.abbr ?? '…'}
+          </p>
+          <p style={{ margin: '0 0 0.5rem' }}>
+            <span className="muted">Opponent: </span>
+            {playoff2026Opponent ? (
+              <Link to={`/franchises/${playoff2026Opponent.franchiseSlug}`}>{playoff2026Opponent.displayName}</Link>
+            ) : (
+              'TBD'
+            )}
+          </p>
+          <p style={{ margin: '0 0 0.5rem' }}>
+            {formatSeriesScore(
+              playoff2026Series,
+              playoff2026Sides.home ?? undefined,
+              playoff2026Sides.away ?? undefined,
+            )}
+          </p>
+          {getLastGameSummary(
+            playoff2026Series.mostRecentGame,
+            playoff2026Sides.home ?? undefined,
+            playoff2026Sides.away ?? undefined,
+          ) ? (
+            <p style={{ margin: '0 0 0.5rem' }} className="muted">
+              {getLastGameSummary(
+                playoff2026Series.mostRecentGame,
+                playoff2026Sides.home ?? undefined,
+                playoff2026Sides.away ?? undefined,
+              )}
+            </p>
+          ) : null}
+          <p style={{ margin: '0 0 0.35rem' }}>
+            <span className="muted">Win probability (model + games): </span>
+            {playoff2026Sides.home?.abbr ?? '—'} {playoff2026Series.currentSeriesProbability.teamA_pct.toFixed(0)}% ·{' '}
+            {playoff2026Sides.away?.abbr ?? '—'} {playoff2026Series.currentSeriesProbability.teamB_pct.toFixed(0)}%
+          </p>
+          {(playoff2026Series.probabilityHistory?.length ?? 0) > 1 ? (
+            <div className="playoff-franchise-spark" aria-hidden>
+              {(playoff2026Series.probabilityHistory ?? []).map((h, i) => (
+                <div key={`${h.gameNumber}-${i}`} className="playoff-franchise-spark-col" title={`${playoff2026Sides.home?.abbr ?? 'Home'} ${h.teamA_pct.toFixed(0)}%`}>
+                  <div
+                    className="playoff-franchise-spark-bar"
+                    style={{ height: `${Math.max(8, h.teamA_pct)}%` }}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="grid-cards" style={{ marginBottom: '1rem' }}>
         <div

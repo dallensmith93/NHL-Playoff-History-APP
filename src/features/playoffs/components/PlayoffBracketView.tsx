@@ -59,7 +59,8 @@ export function PlayoffBracketView({
         {bracket.seasonLabel} season · {bracket.playoffYear} playoffs
       </h2>
       <p className="muted playoff-bracket-hint">
-        Pause on a team row for a quick stat snapshot.
+        Box scores and odds come from the app’s saved data (edit the bracket seed file to update). Hover a team row
+        for stat details.
       </p>
 
       {missingLayout ? (

@@ -1177,6 +1177,98 @@ h3,
   opacity: 0.85;
 }
 
+/* Compact series tracker under matchup rows */
+.playoff-track-compact {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
+}
+
+.playoff-track-summary,
+.playoff-track-last {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.playoff-track-last {
+  margin-top: 0.15rem;
+}
+
+.playoff-track-last-score {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.playoff-track-odds {
+  margin: 0.35rem 0 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+}
+
+.playoff-track-odds-team.playoff-track-odds--up {
+  color: color-mix(in srgb, #15803d 85%, var(--text));
+}
+
+.playoff-track-odds-team.playoff-track-odds--down {
+  color: color-mix(in srgb, #b91c1c 85%, var(--text));
+}
+
+[data-theme='dark'] .playoff-track-odds-team.playoff-track-odds--up {
+  color: #4ade80;
+}
+
+[data-theme='dark'] .playoff-track-odds-team.playoff-track-odds--down {
+  color: #f87171;
+}
+
+.playoff-track-split {
+  display: flex;
+  width: 100%;
+  height: 4px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.playoff-track-split-a {
+  background: color-mix(in srgb, var(--link) 65%, var(--surface-2));
+  min-width: 2px;
+  transition: flex-grow 0.35s ease;
+}
+
+.playoff-track-split-b {
+  background: color-mix(in srgb, var(--muted) 35%, var(--surface-2));
+  min-width: 2px;
+  transition: flex-grow 0.35s ease;
+}
+
+.playoff-franchise-tracker .playoff-franchise-spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 36px;
+  margin-top: 0.5rem;
+}
+
+.playoff-franchise-spark-col {
+  flex: 1;
+  min-width: 4px;
+  max-width: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.playoff-franchise-spark-bar {
+  background: color-mix(in srgb, var(--link) 55%, transparent);
+  border-radius: 2px 2px 0 0;
+  min-height: 4px;
+  transition: height 0.25s ease;
+}
+
 @media (max-width: 720px) {
   .playoff-bracket-row {
     flex-direction: column;

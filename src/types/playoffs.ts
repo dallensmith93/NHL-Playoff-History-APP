@@ -1,6 +1,36 @@
 /** Local-first playoff bracket + predictor (no live APIs). */
 
-export type BracketStatus = 'upcoming' | 'in_progress' | 'complete';
+export type BracketStatus = 'not_started' | 'in_progress' | 'complete';
+
+export interface GameResult {
+  gameNumber: number;
+  /** Franchise slug (matches `Franchise.slug`). */
+  homeTeamSlug: string;
+  awayTeamSlug: string;
+  homeScore: number;
+  awayScore: number;
+  winnerTeamSlug: string;
+  /** ISO date string — edit in seed data when adding results. */
+  date: string;
+  isFinal: boolean;
+}
+
+/** teamA = bracket home side; teamB = away side. */
+export interface SeriesScoreSnapshot {
+  teamA_wins: number;
+  teamB_wins: number;
+}
+
+export interface SeriesWinProbabilityPair {
+  teamA_pct: number;
+  teamB_pct: number;
+}
+
+export interface SeriesProbabilityHistoryEntry {
+  gameNumber: number;
+  teamA_pct: number;
+  teamB_pct: number;
+}
 
 export interface PlayoffTeamEntry {
   id: string;
@@ -31,6 +61,13 @@ export interface PlayoffSeries {
   /** Where the winner advances (optional for Cup). */
   nextSeriesIdForWinner?: string;
   notes?: string;
+  /** Seeded game log — edit in `playoffBracket2026.ts` only (no API). */
+  games: GameResult[];
+  seriesScore: SeriesScoreSnapshot;
+  mostRecentGame?: GameResult;
+  preSeriesProbability: SeriesWinProbabilityPair;
+  currentSeriesProbability: SeriesWinProbabilityPair;
+  probabilityHistory: SeriesProbabilityHistoryEntry[];
 }
 
 export interface PlayoffRound {
@@ -68,23 +105,38 @@ export interface PlayoffTeamAdvancedStats {
   recentForm: number;
   /** 0–1 goalie quality proxy. */
   goalieStrength: number;
-  /** 0–1 playoff experience. */
+  /**
+   * 0–1 current roster / core playoff familiarity (recent springs, returning players).
+   * Distinct from franchise history below.
+   */
   playoffExperience: number;
+  /**
+   * 0–1 organizational playoff pedigree: Cups, conference titles, sustained contention
+   * (seeded per club — edit with `playoffTeamStats2026.ts`).
+   */
+  franchisePlayoffHistory: number;
   /** Multiply final strength; 1 = neutral. */
   injuryRiskModifier?: number;
 }
 
 export interface SimulationWeights {
+  /** Regular-season standings signal (points %). */
+  pointsPct: number;
   xGoalsPct: number;
   goalDiffPerGame: number;
   goalieStrength: number;
   specialTeams: number;
   recentForm: number;
+  /** Roster / core playoff reps. */
   playoffExperience: number;
+  /** Franchise Cups, deep runs, sustained success vs league. */
+  franchisePlayoffHistory: number;
   corsiPct: number;
   defenseXga: number;
   /** Logistic steepness for series win probability. */
   logisticK: number;
+  /** Scales how fast win probability moves with strength gap (tune with weights). */
+  seriesProbabilityScale: number;
   /** Home-ice edge added to strength (series prob). */
   homeIceBoost: number;
 }

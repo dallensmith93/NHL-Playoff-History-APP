@@ -1,6 +1,10 @@
 /**
- * Seeded advanced-style inputs for 2026 playoff teams (local only).
- * Replace this file when updating to a new playoff year.
+ * Seeded inputs for 2026 playoff teams (local only). Replace when updating the year.
+ *
+ * - `pointsPct` / `goalDiffPerGame`: regular-season results.
+ * - `xGoalsPct`, `corsiPct`, `xGaPer60`, special teams: advanced-style profile.
+ * - `playoffExperience`: current core / roster familiarity with the playoffs.
+ * - `franchisePlayoffHistory`: organizational pedigree (Cups, finals, sustained contention) — edit to taste.
  */
 import type { PlayoffTeamAdvancedStats } from '../types/playoffs';
 
@@ -18,6 +22,7 @@ export const PLAYOFF_TEAM_STATS_2026: Record<string, PlayoffTeamAdvancedStats> =
     recentForm: 0.88,
     goalieStrength: 0.82,
     playoffExperience: 0.92,
+    franchisePlayoffHistory: 0.9,
     injuryRiskModifier: 0.98,
   },
   'carolina-hurricanes': {
@@ -32,6 +37,7 @@ export const PLAYOFF_TEAM_STATS_2026: Record<string, PlayoffTeamAdvancedStats> =
     recentForm: 0.85,
     goalieStrength: 0.78,
     playoffExperience: 0.88,
+    franchisePlayoffHistory: 0.75,
   },
   'dallas-stars': {
     franchiseSlug: 'dallas-stars',
@@ -45,6 +51,7 @@ export const PLAYOFF_TEAM_STATS_2026: Record<string, PlayoffTeamAdvancedStats> =
     recentForm: 0.8,
     goalieStrength: 0.85,
     playoffExperience: 0.9,
+    franchisePlayoffHistory: 0.86,
   },
   'tampa-bay-lightning': {
     franchiseSlug: 'tampa-bay-lightning',
@@ -58,6 +65,7 @@ export const PLAYOFF_TEAM_STATS_2026: Record<string, PlayoffTeamAdvancedStats> =
     recentForm: 0.78,
     goalieStrength: 0.8,
     playoffExperience: 0.95,
+    franchisePlayoffHistory: 0.94,
   },
   'buffalo-sabres': {
     franchiseSlug: 'buffalo-sabres',
@@ -71,6 +79,7 @@ export const PLAYOFF_TEAM_STATS_2026: Record<string, PlayoffTeamAdvancedStats> =
     recentForm: 0.9,
     goalieStrength: 0.76,
     playoffExperience: 0.55,
+    franchisePlayoffHistory: 0.73,
   },
   'edmonton-oilers': {
     franchiseSlug: 'edmonton-oilers',
@@ -84,6 +93,7 @@ export const PLAYOFF_TEAM_STATS_2026: Record<string, PlayoffTeamAdvancedStats> =
     recentForm: 0.72,
     goalieStrength: 0.74,
     playoffExperience: 0.88,
+    franchisePlayoffHistory: 0.87,
   },
   'vegas-golden-knights': {
     franchiseSlug: 'vegas-golden-knights',
@@ -97,6 +107,7 @@ export const PLAYOFF_TEAM_STATS_2026: Record<string, PlayoffTeamAdvancedStats> =
     recentForm: 0.7,
     goalieStrength: 0.79,
     playoffExperience: 0.9,
+    franchisePlayoffHistory: 0.88,
   },
   'minnesota-wild': {
     franchiseSlug: 'minnesota-wild',
@@ -110,6 +121,7 @@ export const PLAYOFF_TEAM_STATS_2026: Record<string, PlayoffTeamAdvancedStats> =
     recentForm: 0.74,
     goalieStrength: 0.81,
     playoffExperience: 0.72,
+    franchisePlayoffHistory: 0.66,
   },
   'montreal-canadiens': {
     franchiseSlug: 'montreal-canadiens',
@@ -123,6 +135,7 @@ export const PLAYOFF_TEAM_STATS_2026: Record<string, PlayoffTeamAdvancedStats> =
     recentForm: 0.82,
     goalieStrength: 0.77,
     playoffExperience: 0.78,
+    franchisePlayoffHistory: 0.97,
   },
   'pittsburgh-penguins': {
     franchiseSlug: 'pittsburgh-penguins',
@@ -136,6 +149,7 @@ export const PLAYOFF_TEAM_STATS_2026: Record<string, PlayoffTeamAdvancedStats> =
     recentForm: 0.68,
     goalieStrength: 0.73,
     playoffExperience: 0.92,
+    franchisePlayoffHistory: 0.93,
   },
   'boston-bruins': {
     franchiseSlug: 'boston-bruins',
@@ -149,6 +163,7 @@ export const PLAYOFF_TEAM_STATS_2026: Record<string, PlayoffTeamAdvancedStats> =
     recentForm: 0.75,
     goalieStrength: 0.8,
     playoffExperience: 0.9,
+    franchisePlayoffHistory: 0.92,
   },
   'ottawa-senators': {
     franchiseSlug: 'ottawa-senators',
@@ -162,6 +177,7 @@ export const PLAYOFF_TEAM_STATS_2026: Record<string, PlayoffTeamAdvancedStats> =
     recentForm: 0.77,
     goalieStrength: 0.75,
     playoffExperience: 0.65,
+    franchisePlayoffHistory: 0.72,
   },
   'philadelphia-flyers': {
     franchiseSlug: 'philadelphia-flyers',
@@ -175,6 +191,7 @@ export const PLAYOFF_TEAM_STATS_2026: Record<string, PlayoffTeamAdvancedStats> =
     recentForm: 0.73,
     goalieStrength: 0.76,
     playoffExperience: 0.7,
+    franchisePlayoffHistory: 0.81,
   },
   'anaheim-ducks': {
     franchiseSlug: 'anaheim-ducks',
@@ -188,6 +205,7 @@ export const PLAYOFF_TEAM_STATS_2026: Record<string, PlayoffTeamAdvancedStats> =
     recentForm: 0.8,
     goalieStrength: 0.78,
     playoffExperience: 0.62,
+    franchisePlayoffHistory: 0.78,
   },
   'los-angeles-kings': {
     franchiseSlug: 'los-angeles-kings',
@@ -201,6 +219,7 @@ export const PLAYOFF_TEAM_STATS_2026: Record<string, PlayoffTeamAdvancedStats> =
     recentForm: 0.66,
     goalieStrength: 0.8,
     playoffExperience: 0.85,
+    franchisePlayoffHistory: 0.89,
   },
   'utah-hockey-club': {
     franchiseSlug: 'utah-hockey-club',
@@ -214,5 +233,6 @@ export const PLAYOFF_TEAM_STATS_2026: Record<string, PlayoffTeamAdvancedStats> =
     recentForm: 0.78,
     goalieStrength: 0.74,
     playoffExperience: 0.45,
+    franchisePlayoffHistory: 0.48,
   },
 };

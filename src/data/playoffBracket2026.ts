@@ -1,11 +1,25 @@
 /**
  * 2026 Stanley Cup Playoffs bracket — local seed only (swap file for future years).
- * First-round matchups align with NHL division seeding / wild-card format.
+ * Edit `games` / scores here; no live API. Probabilities are filled by `enrichPlayoffBracketWithTracking`.
  */
-import type { PlayoffBracket, PlayoffRound, PlayoffSeries, PlayoffTeamEntry } from '../types/playoffs';
+import { enrichPlayoffBracketWithTracking } from '../features/playoffs/utils/seriesTracking';
+import type {
+  BracketStatus,
+  GameResult,
+  PlayoffBracket,
+  PlayoffRound,
+  PlayoffSeries,
+  PlayoffTeamEntry,
+  PlayoffTeamRef,
+} from '../types/playoffs';
+import { DEFAULT_SIMULATION_WEIGHTS } from './simulationWeights';
+import { PLAYOFF_TEAM_STATS_2026 } from './playoffTeamStats2026';
 
 const T = (t: PlayoffTeamEntry) => ({ type: 'seed' as const, team: t });
 const W = (seriesId: string) => ({ type: 'winnerOf' as const, seriesId });
+
+/** Change when you add new box scores (display only). */
+export const PLAYOFF_2026_LAST_BOX_DATE = '2026-04-16';
 
 export const PLAYOFF_TEAMS_2026 = {
   buf: {
@@ -122,8 +136,38 @@ export const PLAYOFF_TEAMS_2026 = {
   },
 } satisfies Record<string, PlayoffTeamEntry>;
 
+type RowInput = {
+  id: string;
+  conference: PlayoffSeries['conference'];
+  round: PlayoffSeries['round'];
+  roundLabel: string;
+  home: PlayoffTeamRef;
+  away: PlayoffTeamRef;
+  winsToWin: number;
+  homeWins: number;
+  awayWins: number;
+  status: BracketStatus;
+  nextSeriesIdForWinner?: string;
+  winnerFranchiseSlug?: string;
+  notes?: string;
+  games?: GameResult[];
+};
+
+function row(i: RowInput): PlayoffSeries {
+  const games = i.games ?? [];
+  return {
+    ...i,
+    games,
+    seriesScore: { teamA_wins: i.homeWins, teamB_wins: i.awayWins },
+    mostRecentGame: games.length ? games[games.length - 1] : undefined,
+    preSeriesProbability: { teamA_pct: 50, teamB_pct: 50 },
+    currentSeriesProbability: { teamA_pct: 50, teamB_pct: 50 },
+    probabilityHistory: [{ gameNumber: 0, teamA_pct: 50, teamB_pct: 50 }],
+  };
+}
+
 const eastR1: PlayoffSeries[] = [
-  {
+  row({
     id: '2026-e-r1-a1-wc1',
     conference: 'Eastern',
     round: 'first',
@@ -133,10 +177,10 @@ const eastR1: PlayoffSeries[] = [
     winsToWin: 4,
     homeWins: 0,
     awayWins: 0,
-    status: 'in_progress',
+    status: 'not_started',
     nextSeriesIdForWinner: '2026-e-r2-top',
-  },
-  {
+  }),
+  row({
     id: '2026-e-r1-a2-a3',
     conference: 'Eastern',
     round: 'first',
@@ -146,10 +190,10 @@ const eastR1: PlayoffSeries[] = [
     winsToWin: 4,
     homeWins: 0,
     awayWins: 0,
-    status: 'in_progress',
+    status: 'not_started',
     nextSeriesIdForWinner: '2026-e-r2-top',
-  },
-  {
+  }),
+  row({
     id: '2026-e-r1-m1-wc2',
     conference: 'Eastern',
     round: 'first',
@@ -157,12 +201,24 @@ const eastR1: PlayoffSeries[] = [
     home: T(PLAYOFF_TEAMS_2026.car),
     away: T(PLAYOFF_TEAMS_2026.ott),
     winsToWin: 4,
-    homeWins: 0,
+    homeWins: 1,
     awayWins: 0,
     status: 'in_progress',
     nextSeriesIdForWinner: '2026-e-r2-bot',
-  },
-  {
+    games: [
+      {
+        gameNumber: 1,
+        homeTeamSlug: 'carolina-hurricanes',
+        awayTeamSlug: 'ottawa-senators',
+        homeScore: 2,
+        awayScore: 0,
+        winnerTeamSlug: 'carolina-hurricanes',
+        date: PLAYOFF_2026_LAST_BOX_DATE,
+        isFinal: true,
+      },
+    ],
+  }),
+  row({
     id: '2026-e-r1-m2-m3',
     conference: 'Eastern',
     round: 'first',
@@ -171,14 +227,26 @@ const eastR1: PlayoffSeries[] = [
     away: T(PLAYOFF_TEAMS_2026.phi),
     winsToWin: 4,
     homeWins: 0,
-    awayWins: 0,
+    awayWins: 1,
     status: 'in_progress',
     nextSeriesIdForWinner: '2026-e-r2-bot',
-  },
+    games: [
+      {
+        gameNumber: 1,
+        homeTeamSlug: 'pittsburgh-penguins',
+        awayTeamSlug: 'philadelphia-flyers',
+        homeScore: 2,
+        awayScore: 3,
+        winnerTeamSlug: 'philadelphia-flyers',
+        date: PLAYOFF_2026_LAST_BOX_DATE,
+        isFinal: true,
+      },
+    ],
+  }),
 ];
 
 const westR1: PlayoffSeries[] = [
-  {
+  row({
     id: '2026-w-r1-c1-wc2',
     conference: 'Western',
     round: 'first',
@@ -188,10 +256,10 @@ const westR1: PlayoffSeries[] = [
     winsToWin: 4,
     homeWins: 0,
     awayWins: 0,
-    status: 'in_progress',
+    status: 'not_started',
     nextSeriesIdForWinner: '2026-w-r2-top',
-  },
-  {
+  }),
+  row({
     id: '2026-w-r1-c2-c3',
     conference: 'Western',
     round: 'first',
@@ -200,11 +268,23 @@ const westR1: PlayoffSeries[] = [
     away: T(PLAYOFF_TEAMS_2026.min),
     winsToWin: 4,
     homeWins: 0,
-    awayWins: 0,
+    awayWins: 1,
     status: 'in_progress',
     nextSeriesIdForWinner: '2026-w-r2-top',
-  },
-  {
+    games: [
+      {
+        gameNumber: 1,
+        homeTeamSlug: 'dallas-stars',
+        awayTeamSlug: 'minnesota-wild',
+        homeScore: 1,
+        awayScore: 6,
+        winnerTeamSlug: 'minnesota-wild',
+        date: PLAYOFF_2026_LAST_BOX_DATE,
+        isFinal: true,
+      },
+    ],
+  }),
+  row({
     id: '2026-w-r1-p1-wc1',
     conference: 'Western',
     round: 'first',
@@ -214,10 +294,10 @@ const westR1: PlayoffSeries[] = [
     winsToWin: 4,
     homeWins: 0,
     awayWins: 0,
-    status: 'in_progress',
+    status: 'not_started',
     nextSeriesIdForWinner: '2026-w-r2-bot',
-  },
-  {
+  }),
+  row({
     id: '2026-w-r1-p2-p3',
     conference: 'Western',
     round: 'first',
@@ -227,13 +307,13 @@ const westR1: PlayoffSeries[] = [
     winsToWin: 4,
     homeWins: 0,
     awayWins: 0,
-    status: 'in_progress',
+    status: 'not_started',
     nextSeriesIdForWinner: '2026-w-r2-bot',
-  },
+  }),
 ];
 
 const eastR2: PlayoffSeries[] = [
-  {
+  row({
     id: '2026-e-r2-top',
     conference: 'Eastern',
     round: 'second',
@@ -243,10 +323,10 @@ const eastR2: PlayoffSeries[] = [
     winsToWin: 4,
     homeWins: 0,
     awayWins: 0,
-    status: 'upcoming',
+    status: 'not_started',
     nextSeriesIdForWinner: '2026-e-cf',
-  },
-  {
+  }),
+  row({
     id: '2026-e-r2-bot',
     conference: 'Eastern',
     round: 'second',
@@ -256,13 +336,13 @@ const eastR2: PlayoffSeries[] = [
     winsToWin: 4,
     homeWins: 0,
     awayWins: 0,
-    status: 'upcoming',
+    status: 'not_started',
     nextSeriesIdForWinner: '2026-e-cf',
-  },
+  }),
 ];
 
 const westR2: PlayoffSeries[] = [
-  {
+  row({
     id: '2026-w-r2-top',
     conference: 'Western',
     round: 'second',
@@ -272,10 +352,10 @@ const westR2: PlayoffSeries[] = [
     winsToWin: 4,
     homeWins: 0,
     awayWins: 0,
-    status: 'upcoming',
+    status: 'not_started',
     nextSeriesIdForWinner: '2026-w-cf',
-  },
-  {
+  }),
+  row({
     id: '2026-w-r2-bot',
     conference: 'Western',
     round: 'second',
@@ -285,13 +365,13 @@ const westR2: PlayoffSeries[] = [
     winsToWin: 4,
     homeWins: 0,
     awayWins: 0,
-    status: 'upcoming',
+    status: 'not_started',
     nextSeriesIdForWinner: '2026-w-cf',
-  },
+  }),
 ];
 
 const conferenceFinals: PlayoffSeries[] = [
-  {
+  row({
     id: '2026-e-cf',
     conference: 'Eastern',
     round: 'conference_final',
@@ -301,10 +381,10 @@ const conferenceFinals: PlayoffSeries[] = [
     winsToWin: 4,
     homeWins: 0,
     awayWins: 0,
-    status: 'upcoming',
+    status: 'not_started',
     nextSeriesIdForWinner: '2026-final',
-  },
-  {
+  }),
+  row({
     id: '2026-w-cf',
     conference: 'Western',
     round: 'conference_final',
@@ -314,13 +394,13 @@ const conferenceFinals: PlayoffSeries[] = [
     winsToWin: 4,
     homeWins: 0,
     awayWins: 0,
-    status: 'upcoming',
+    status: 'not_started',
     nextSeriesIdForWinner: '2026-final',
-  },
+  }),
 ];
 
 const cupFinal: PlayoffSeries[] = [
-  {
+  row({
     id: '2026-final',
     conference: 'Final',
     round: 'cup_final',
@@ -330,11 +410,11 @@ const cupFinal: PlayoffSeries[] = [
     winsToWin: 4,
     homeWins: 0,
     awayWins: 0,
-    status: 'upcoming',
-  },
+    status: 'not_started',
+  }),
 ];
 
-const rounds: PlayoffRound[] = [
+const roundsSeed: PlayoffRound[] = [
   { id: '2026-east-r1', label: 'Eastern Conference — First Round', conference: 'Eastern', series: eastR1 },
   { id: '2026-west-r1', label: 'Western Conference — First Round', conference: 'Western', series: westR1 },
   { id: '2026-east-r2', label: 'Eastern Conference — Second Round', conference: 'Eastern', series: eastR2 },
@@ -353,13 +433,27 @@ const seriesOrder = [
   '2026-final',
 ];
 
-export const PLAYOFF_BRACKET_2026: PlayoffBracket = {
+/** Raw bracket + box scores — use for tests or diffing seed changes. */
+export const PLAYOFF_BRACKET_2026_SEED: PlayoffBracket = {
   seasonLabel: '2025-26',
   title: '2026 Stanley Cup Playoffs Bracket',
   playoffYear: 2026,
-  rounds,
+  rounds: roundsSeed,
   seriesOrder,
 };
+
+/** Resolve franchise slug → bracket team entry (playoff teams only). */
+export const PLAYOFF_TEAM_ENTRY_BY_SLUG: Map<string, PlayoffTeamEntry> = new Map(
+  Object.values(PLAYOFF_TEAMS_2026).map((t) => [t.franchiseSlug, t]),
+);
+
+/** Enriched with pre-game and live win probabilities (local model). */
+export const PLAYOFF_BRACKET_2026: PlayoffBracket = enrichPlayoffBracketWithTracking(
+  PLAYOFF_BRACKET_2026_SEED,
+  PLAYOFF_TEAM_STATS_2026,
+  DEFAULT_SIMULATION_WEIGHTS,
+  PLAYOFF_TEAM_ENTRY_BY_SLUG,
+);
 
 /** Stable ids for simulation / analytics (keep in sync with `seriesOrder` last & CF rows). */
 export const BRACKET_2026_IDS = {
@@ -369,14 +463,9 @@ export const BRACKET_2026_IDS = {
 } as const;
 
 export function getAllSeries2026(): PlayoffSeries[] {
-  return rounds.flatMap((r) => r.series);
+  return PLAYOFF_BRACKET_2026.rounds.flatMap((r) => r.series);
 }
 
 export function getSeriesById2026(): Map<string, PlayoffSeries> {
   return new Map(getAllSeries2026().map((s) => [s.id, s]));
 }
-
-/** Resolve franchise slug → bracket team entry (playoff teams only). */
-export const PLAYOFF_TEAM_ENTRY_BY_SLUG: Map<string, PlayoffTeamEntry> = new Map(
-  Object.values(PLAYOFF_TEAMS_2026).map((t) => [t.franchiseSlug, t]),
-);

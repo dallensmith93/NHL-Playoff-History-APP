@@ -39,6 +39,8 @@ export interface PlayoffPredictorPersistedState {
   favoritePredictedTeamSlug?: string;
   /** When true, bracket cards prefer team primary colors more aggressively. */
   bracketAutoTheme: boolean;
+  /** Last series card focused on the 2026 bracket (local UI only). */
+  lastViewedPlayoffSeriesId?: string;
 }
 
 export interface AppPersistedStateV1 {

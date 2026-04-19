@@ -1,15 +1,22 @@
 import type { SimulationWeights } from '../types/playoffs';
 
-/** Default predictor weights — tune in one place per season refresh. */
+/**
+ * Weights for series win strength — sum to 1.0.
+ * Tune here when refreshing the season file; `seriesProbabilityScale` adjusts how
+ * sharply win % moves with the strength gap.
+ */
 export const DEFAULT_SIMULATION_WEIGHTS: SimulationWeights = {
-  xGoalsPct: 0.22,
-  goalDiffPerGame: 0.18,
-  goalieStrength: 0.18,
-  specialTeams: 0.12,
-  recentForm: 0.1,
-  playoffExperience: 0.08,
+  pointsPct: 0.13,
+  xGoalsPct: 0.16,
+  goalDiffPerGame: 0.14,
+  goalieStrength: 0.15,
+  specialTeams: 0.1,
+  recentForm: 0.08,
+  playoffExperience: 0.07,
+  franchisePlayoffHistory: 0.07,
   corsiPct: 0.07,
-  defenseXga: 0.05,
-  logisticK: 1.35,
-  homeIceBoost: 0.04,
+  defenseXga: 0.03,
+  logisticK: 1.42,
+  seriesProbabilityScale: 21,
+  homeIceBoost: 0.038,
 };

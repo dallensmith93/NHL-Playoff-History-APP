@@ -8,6 +8,7 @@ import type {
   SimulatedSeriesResult,
 } from '../../../types/playoffs';
 import { resolveBracketSide } from '../utils/bracketResolve';
+import { formatSeriesScore, getProbabilityDelta } from '../utils/seriesTracking';
 
 function statSummary(stats: PlayoffTeamAdvancedStats | undefined): string {
   if (!stats) return 'No saved stat snapshot for this team.';
@@ -102,13 +103,22 @@ function TeamRow({
       <Link
         to={`/franchises/${franchise.slug}`}
         className="playoff-bracket-team-link"
-        onClick={(e) => e.stopPropagation()}
       >
         {row}
       </Link>
     );
   }
   return row;
+}
+
+function shortLastScore(
+  series: PlayoffSeries,
+  homeAbbr: string,
+  awayAbbr: string,
+): string | null {
+  const g = series.mostRecentGame;
+  if (!g) return null;
+  return `${homeAbbr} ${g.homeScore}–${awayAbbr} ${g.awayScore}`;
 }
 
 export function PlayoffSeriesCard({
@@ -133,17 +143,32 @@ export function PlayoffSeriesCard({
   const displayHomeWins = simResult?.homeWins ?? series.homeWins;
   const displayAwayWins = simResult?.awayWins ?? series.awayWins;
 
-  const statusLabel = simResult
-    ? 'Finished (this run)'
-    : series.status === 'complete'
+  const statusLabel =
+    series.status === 'complete'
       ? 'Complete'
       : series.status === 'in_progress'
-        ? 'In progress'
+        ? 'Live'
         : 'Upcoming';
 
   const isFinal = series.conference === 'Final';
-  /** Tighter logos in early rounds leave room for full team names. */
   const logoSize: FranchiseLogoSize = isFinal ? 'md' : 'xs';
+
+  const hist = series.probabilityHistory ?? [];
+  const prevPair = hist.length >= 2 ? hist[hist.length - 2] : undefined;
+  const cur = series.currentSeriesProbability;
+  const delta = getProbabilityDelta(cur, prevPair);
+
+  const ha = home?.abbr ?? '—';
+  const aa = away?.abbr ?? '—';
+  const bothKnown = !!(home && away);
+
+  const arrowA = delta.teamA > 0.35 ? '↑' : delta.teamA < -0.35 ? '↓' : '';
+  const arrowB = delta.teamB > 0.35 ? '↑' : delta.teamB < -0.35 ? '↓' : '';
+
+  const scoreLine = bothKnown
+    ? formatSeriesScore(series, home ?? undefined, away ?? undefined)
+    : 'Matchup TBD';
+  const lastShort = bothKnown ? shortLastScore(series, ha, aa) : null;
 
   return (
     <div className={`playoff-bracket-matchup${isFinal ? ' playoff-bracket-matchup--final' : ''}`}>
@@ -157,7 +182,7 @@ export function PlayoffSeriesCard({
         <TeamRow
           franchise={home ? franchiseBySlug.get(home.franchiseSlug) : undefined}
           seedLabel={home?.seedLabel}
-          abbr={home?.abbr ?? 'TBD'}
+          abbr={ha}
           slug={home?.franchiseSlug}
           isWinner={!!home && wSlug === home.franchiseSlug}
           stats={home ? statsBySlug[home.franchiseSlug] : undefined}
@@ -168,7 +193,7 @@ export function PlayoffSeriesCard({
         <TeamRow
           franchise={away ? franchiseBySlug.get(away.franchiseSlug) : undefined}
           seedLabel={away?.seedLabel}
-          abbr={away?.abbr ?? 'TBD'}
+          abbr={aa}
           slug={away?.franchiseSlug}
           isWinner={!!away && wSlug === away.franchiseSlug}
           stats={away ? statsBySlug[away.franchiseSlug] : undefined}
@@ -177,17 +202,52 @@ export function PlayoffSeriesCard({
           logoSize={logoSize}
         />
       </div>
+
+      {bothKnown ? (
+        <div className="playoff-track-compact">
+          <p className="playoff-track-summary muted">{scoreLine}</p>
+          {lastShort ? (
+            <p className="playoff-track-last muted">
+              Last: <span className="playoff-track-last-score">{lastShort}</span>
+            </p>
+          ) : null}
+          <p className="playoff-track-odds" aria-label="Series win probability">
+            <span
+              className={`playoff-track-odds-team${arrowA === '↑' ? ' playoff-track-odds--up' : ''}${arrowA === '↓' ? ' playoff-track-odds--down' : ''}`}
+            >
+              {ha} {cur.teamA_pct.toFixed(0)}%{arrowA}
+            </span>
+            <span className="playoff-track-odds-sep muted"> · </span>
+            <span
+              className={`playoff-track-odds-team${arrowB === '↑' ? ' playoff-track-odds--up' : ''}${arrowB === '↓' ? ' playoff-track-odds--down' : ''}`}
+            >
+              {aa} {cur.teamB_pct.toFixed(0)}%{arrowB}
+            </span>
+          </p>
+          <div className="playoff-track-split" role="presentation" aria-hidden>
+            <span
+              className="playoff-track-split-a"
+              style={{ flexGrow: Math.max(1, cur.teamA_pct) }}
+            />
+            <span
+              className="playoff-track-split-b"
+              style={{ flexGrow: Math.max(1, cur.teamB_pct) }}
+            />
+          </div>
+        </div>
+      ) : null}
+
       <div className="playoff-bracket-matchup-foot">
         <span>
           Best of {series.winsToWin * 2 - 1} · {displayHomeWins}-{displayAwayWins}
-          {simResult ? <span className="muted"> (this run)</span> : null}
+          {simResult ? <span className="muted"> (run)</span> : null}
         </span>
         <span className="muted">· {statusLabel}</span>
         {simResult?.upset ? <span className="playoff-bracket-upset-badge">Upset</span> : null}
       </div>
       {wSlug ? (
         <div className="playoff-bracket-sim-winner muted">
-          This run: <strong>{franchiseBySlug.get(wSlug)?.currentDisplayName ?? wSlug}</strong>
+          Run winner: <strong>{franchiseBySlug.get(wSlug)?.currentDisplayName ?? wSlug}</strong>
         </div>
       ) : null}
     </div>
