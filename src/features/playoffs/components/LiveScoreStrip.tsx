@@ -9,7 +9,7 @@ function formatStart(iso: string): string {
   }
 }
 
-/** Prefer live, then upcoming (scheduled), then recent finals. Include unknown so we never hide a game. */
+/** Prefer live, then upcoming (scheduled), then other games. Include unknown so we never hide a game. */
 function sortStripGames(games: LivePlayoffGame[]): LivePlayoffGame[] {
   const rank = (g: LivePlayoffGame) =>
     g.state === 'live' ? 0 : g.state === 'scheduled' ? 1 : g.state === 'final' ? 2 : g.state === 'unknown' ? 3 : 4;

@@ -183,11 +183,6 @@ export function PlayoffsBracketPage() {
       })
     : '—';
 
-  const recentFinals = useMemo(
-    () => liveGames.filter((g) => g.state === 'final').slice(-8),
-    [liveGames],
-  );
-
   return (
     <div className="playoffs-bracket-page">
       <div className="page-hero">
@@ -424,21 +419,6 @@ export function PlayoffsBracketPage() {
       ) : null}
 
       <UpsetAlertsPanel bracket={bracket} teamEntryBySlug={PLAYOFF_TEAM_ENTRY_BY_SLUG} />
-
-      {recentFinals.length > 0 ? (
-        <section className="card card-pad" style={{ marginBottom: '1rem' }}>
-          <h2 className="display" style={{ fontSize: '1.1rem', margin: '0 0 0.35rem' }}>
-            Most recent finals on the feed
-          </h2>
-          <ul style={{ margin: 0, paddingLeft: '1.1rem', fontSize: '0.88rem' }}>
-            {recentFinals.map((g) => (
-              <li key={g.gamePk}>
-                {g.awayAbbr} {g.awayScore} @ {g.homeAbbr} {g.homeScore}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
 
       <PredictionSummary
         quick={quickResult}
