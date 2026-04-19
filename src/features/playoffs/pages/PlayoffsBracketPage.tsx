@@ -9,6 +9,7 @@ import type { PlayoffSimModePersisted } from '../../../types/persistence';
 import { VisitorRegionNote } from '../../../components/VisitorRegionNote';
 import { LiveScoreStrip } from '../components/LiveScoreStrip';
 import { PlayoffBracketView } from '../components/PlayoffBracketView';
+import { PlayoffScoresByRound } from '../components/PlayoffScoresByRound';
 import { PredictionSummary } from '../components/PredictionSummary';
 import { TeamOddsTable } from '../components/TeamOddsTable';
 import { UpsetAlertsPanel } from '../components/UpsetAlertsPanel';
@@ -259,6 +260,8 @@ export function PlayoffsBracketPage() {
         </div>
         <LiveScoreStrip games={liveGames} />
       </section>
+
+      <PlayoffScoresByRound bracket={bracket} winnerBySeries={winnerBySeries} />
 
       <section className="card card-pad" style={{ marginBottom: '1rem' }}>
         <h2 className="display" style={{ fontSize: '1.2rem', margin: '0 0 0.75rem' }}>

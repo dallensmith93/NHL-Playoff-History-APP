@@ -1177,6 +1177,66 @@ h3,
   opacity: 0.85;
 }
 
+/* Round-by-round playoff box scores (page section) */
+.playoff-scores-by-round .playoff-scores-rounds {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.playoff-scores-round-block {
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  background: var(--surface-2, var(--surface));
+}
+
+.playoff-scores-round-title {
+  margin: 0 0 0.55rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.playoff-scores-round-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.playoff-scores-series-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.75rem;
+  margin-bottom: 0.3rem;
+}
+
+.playoff-scores-series-matchup {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.playoff-scores-series-record {
+  font-size: 0.78rem;
+}
+
+.playoff-scores-series-empty {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.playoff-scores-games-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.playoff-scores-game-line {
+  margin-bottom: 0.15rem;
+}
+
 /* Compact series tracker under matchup rows */
 .playoff-track-compact {
   margin-top: 0.4rem;
