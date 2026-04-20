@@ -1210,6 +1210,12 @@ h3,
   line-height: 1.35;
 }
 
+.playoff-bracket-foot-bestof {
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+
 .playoff-bracket-sim-winner {
   font-size: 0.72rem;
   margin-top: 0.4rem;
