@@ -18,7 +18,10 @@ import { buildSeriesOverlaysForBracket } from '../utils/mergeBracketWithLive';
 import { explainOddsShift } from '../utils/probabilities';
 import { buildWinnersMap, resolvePlayoffEntry } from '../utils/seriesTracking';
 import {
+  buildQuickSimSeriesLines,
   buildSimulationExplanation,
+  computeMonteCarloWeightedSeriesPcts,
+  computeQuickSimSeriesPcts,
   runMonteCarloFromLiveBracket,
   simulateBracket,
   summarizeQuickRunForDisplay,
@@ -202,6 +205,24 @@ export function PlayoffsBracketPage() {
 
   const quickDisplay = quickResult ? summarizeQuickRunForDisplay(quickResult) : null;
 
+  const quickSimSeriesLines = useMemo(() => {
+    if (!quickResult) return [];
+    return buildQuickSimSeriesLines(quickResult, seriesById, PLAYOFF_TEAM_ENTRY_BY_SLUG);
+  }, [quickResult, seriesById]);
+
+  /** Bracket card % for series with no live games yet — Monte Carlo batch beats single-run when both exist. */
+  const simBracketLinePctBySeriesId = useMemo(() => {
+    if (mcSummary) return computeMonteCarloWeightedSeriesPcts(mcSummary);
+    if (quickResult) return computeQuickSimSeriesPcts(quickResult, seriesById, PLAYOFF_TEAM_ENTRY_BY_SLUG);
+    return undefined;
+  }, [mcSummary, quickResult, seriesById]);
+
+  const simBracketLineSource: 'monte_carlo' | 'quick' | undefined = mcSummary
+    ? 'monte_carlo'
+    : quickResult
+      ? 'quick'
+      : undefined;
+
   const playoffSlugs = useMemo(() => [...PLAYOFF_TEAM_ENTRY_BY_SLUG.keys()].sort(), []);
 
   const darkHorse = useMemo(() => {
@@ -376,6 +397,36 @@ export function PlayoffsBracketPage() {
               </p>
             );
           })()}
+          {quickSimSeriesLines.length > 0 ? (
+            <>
+              <h3 className="display" style={{ fontSize: '1rem', margin: '0.85rem 0 0.35rem' }}>
+                This run — matchups & model series lines
+              </h3>
+              <p className="muted" style={{ margin: '0 0 0.55rem', fontSize: '0.82rem' }}>
+                Each row is the pairing as of this run, the model&apos;s pre-series win probability for the
+                favorite, then the simulated score (winner in parentheses).
+              </p>
+              <ul className="quick-sim-series-lines">
+                {quickSimSeriesLines.map((line) => (
+                  <li key={line.seriesId}>
+                    <span className="quick-sim-series-lines-round">{line.roundLabel}</span>
+                    <span className="quick-sim-series-lines-matchup">
+                      {line.homeAbbr} vs {line.awayAbbr}
+                    </span>
+                    <span className="muted"> · Favorite {line.favoriteAbbr} ~{line.favoriteSeriesWinPct.toFixed(1)}%</span>
+                    <span>
+                      {' '}
+                      · {line.homeWins}-{line.awayWins}
+                    </span>
+                    <span className="muted">
+                      {' '}
+                      ({line.winnerAbbr} wins{line.upset ? ', upset' : ''})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
         </section>
       ) : null}
 
@@ -404,6 +455,47 @@ export function PlayoffsBracketPage() {
               <strong>{franchiseBySlug.get(darkHorse.franchiseSlug)?.currentDisplayName}</strong> still showed up
               in about {darkHorse.cupPct.toFixed(1)}% of wins in this batch
             </p>
+          ) : null}
+          {mcSummary.seriesMatchupBreakdown.length > 0 ? (
+            <>
+              <h3 className="display" style={{ fontSize: '1.02rem', margin: '0.85rem 0 0.35rem' }}>
+                Matchups & model lines by bracket slot
+              </h3>
+              <p className="muted" style={{ margin: '0 0 0.65rem', fontSize: '0.82rem' }}>
+                For each series position, every pairing that showed up in this batch, how often it occurred, and the
+                average pre-series favorite % (the &quot;line&quot;) across runs where that matchup happened — so you
+                can compare possible future series side by side.
+              </p>
+              <div className="mc-matchup-breakdown">
+                {mcSummary.seriesMatchupBreakdown.map((slot) => (
+                  <div key={slot.seriesId} className="mc-matchup-slot">
+                    <h4 className="mc-matchup-slot-title">{slot.roundLabel}</h4>
+                    <div className="mc-matchup-table-wrap">
+                      <table className="mc-matchup-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">Matchup</th>
+                            <th scope="col">% of runs</th>
+                            <th scope="col">Avg favorite %</th>
+                            <th scope="col">Avg home (A) %</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {slot.options.map((opt) => (
+                            <tr key={opt.matchupKey}>
+                              <td>{opt.matchupLabel}</td>
+                              <td>{opt.frequencyPct.toFixed(1)}%</td>
+                              <td>{opt.avgFavoriteSeriesWinPct.toFixed(1)}%</td>
+                              <td>{opt.avgTeamAPct.toFixed(1)}%</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : null}
           <TeamOddsTable mcSummary={mcSummary} franchiseBySlug={franchiseBySlug} />
         </section>
@@ -474,6 +566,8 @@ export function PlayoffsBracketPage() {
         simResultsBySeriesId={simResultsBySeriesId}
         teamColorAccent={pp.bracketAutoTheme}
         liveOverlayBySeriesId={liveOverlayBySeriesId}
+        simBracketLinePctBySeriesId={simBracketLinePctBySeriesId}
+        simBracketLineSource={simBracketLineSource}
       />
 
       <div className="field" style={{ marginTop: '1rem' }}>

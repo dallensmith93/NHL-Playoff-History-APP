@@ -10,7 +10,7 @@ import type {
 import type { SeriesLiveOverlay } from '../types/liveScores';
 import { resolveBracketSide } from '../utils/bracketResolve';
 import { explainOddsShift } from '../utils/probabilities';
-import { formatSeriesScore, getProbabilityDelta } from '../utils/seriesTracking';
+import { formatSeriesScore, formatSeriesStandingsFromWins, getProbabilityDelta } from '../utils/seriesTracking';
 import { getUpsetAlert, labelUpset } from '../utils/upsetAlerts';
 
 function statSummary(stats: PlayoffTeamAdvancedStats | undefined): string {
@@ -132,6 +132,8 @@ export function PlayoffSeriesCard({
   simResult,
   teamColorAccent,
   liveOverlay,
+  simBracketLinePctBySeriesId,
+  simBracketLineSource,
 }: {
   series: PlayoffSeries;
   winnerBySeries: Map<string, string>;
@@ -140,19 +142,19 @@ export function PlayoffSeriesCard({
   simResult?: SimulatedSeriesResult;
   teamColorAccent: boolean;
   liveOverlay?: SeriesLiveOverlay;
+  simBracketLinePctBySeriesId?: Map<string, { teamA_pct: number; teamB_pct: number }>;
+  simBracketLineSource?: 'monte_carlo' | 'quick';
 }) {
   const home = resolveBracketSide(series.home, winnerBySeries).entry;
   const away = resolveBracketSide(series.away, winnerBySeries).entry;
 
-  /** Merged live schedule updates `series` wins; a stale quick-sim snapshot must not mask real results. */
-  const mergedGamesPlayed = series.homeWins + series.awayWins;
-  const useMergedWins =
-    mergedGamesPlayed > 0 || series.mostRecentGame !== undefined || series.winnerFranchiseSlug !== undefined;
-  const displayHomeWins = useMergedWins ? series.homeWins : (simResult?.homeWins ?? series.homeWins);
-  const displayAwayWins = useMergedWins ? series.awayWins : (simResult?.awayWins ?? series.awayWins);
+  /** Live merge fills `series` wins; when a quick sim is active, show that run (session-only — cleared on refresh). */
+  const displayHomeWins = simResult ? simResult.homeWins : series.homeWins;
+  const displayAwayWins = simResult ? simResult.awayWins : series.awayWins;
 
-  const wSlug =
-    series.winnerFranchiseSlug ?? simResult?.winnerSlug ?? winnerBySeries.get(series.id);
+  const wSlug = simResult
+    ? simResult.winnerSlug
+    : series.winnerFranchiseSlug ?? winnerBySeries.get(series.id);
 
   const statusLabel =
     series.status === 'complete'
@@ -178,16 +180,35 @@ export function PlayoffSeriesCard({
   const aa = away?.abbr ?? '—';
   const bothKnown = !!(home && away);
 
-  const arrowA = delta.teamA > 0.35 ? '↑' : delta.teamA < -0.35 ? '↓' : '';
-  const arrowB = delta.teamB > 0.35 ? '↑' : delta.teamB < -0.35 ? '↓' : '';
-  const showDelta = hist.length >= 2;
+  /** Live games in the feed — keep enriched bracket %; otherwise sim can replace 50–50 for “future” slots. */
+  const hasLiveGames =
+    series.homeWins > 0 || series.awayWins > 0 || (series.games?.length ?? 0) > 0;
+  const simPct = simBracketLinePctBySeriesId?.get(series.id);
+  const useSimLinePct = !!simPct && bothKnown && !hasLiveGames;
+  const prob = useSimLinePct && simPct ? simPct : cur;
+
+  const arrowA =
+    !useSimLinePct && delta.teamA > 0.35 ? '↑' : !useSimLinePct && delta.teamA < -0.35 ? '↓' : '';
+  const arrowB =
+    !useSimLinePct && delta.teamB > 0.35 ? '↑' : !useSimLinePct && delta.teamB < -0.35 ? '↓' : '';
+  const showDelta = !useSimLinePct && hist.length >= 2;
   const deltaAStr = showDelta && Math.abs(delta.teamA) >= 0.25 ? `${delta.teamA > 0 ? '+' : ''}${delta.teamA.toFixed(0)}` : '';
   const deltaBStr = showDelta && Math.abs(delta.teamB) >= 0.25 ? `${delta.teamB > 0 ? '+' : ''}${delta.teamB.toFixed(0)}` : '';
 
   const scoreLine = bothKnown
-    ? formatSeriesScore(series, home ?? undefined, away ?? undefined)
+    ? simResult
+      ? formatSeriesStandingsFromWins(simResult.homeWins, simResult.awayWins, home ?? undefined, away ?? undefined)
+      : formatSeriesScore(series, home ?? undefined, away ?? undefined)
     : 'Matchup TBD';
   const lastShort = bothKnown ? shortLastScore(series, ha, aa) : null;
+
+  const oddsTitle = useSimLinePct
+    ? simBracketLineSource === 'monte_carlo'
+      ? 'Monte Carlo weighted line (batch average) — bracket home is team A. Shown when this series has no games in the feed yet.'
+      : simBracketLineSource === 'quick'
+        ? 'Last single-run model line — bracket home is team A. Shown when this series has no games in the feed yet.'
+        : 'Simulation model line — bracket home is team A.'
+    : explainOddsShift(series, homeE, awayE, statsBySlug);
 
   return (
     <div className={`playoff-bracket-matchup${isFinal ? ' playoff-bracket-matchup--final' : ''}`}>
@@ -253,30 +274,30 @@ export function PlayoffSeriesCard({
           <p
             className="playoff-track-odds"
             aria-label="Series win probability"
-            title={explainOddsShift(series, homeE, awayE, statsBySlug)}
+            title={oddsTitle}
           >
             <span
               className={`playoff-track-odds-team${arrowA === '↑' ? ' playoff-track-odds--up' : ''}${arrowA === '↓' ? ' playoff-track-odds--down' : ''}`}
             >
-              {ha} {cur.teamA_pct.toFixed(0)}%{arrowA}
+              {ha} {prob.teamA_pct.toFixed(0)}%{arrowA}
               {deltaAStr ? <span className="muted"> ({deltaAStr})</span> : null}
             </span>
             <span className="playoff-track-odds-sep muted"> · </span>
             <span
               className={`playoff-track-odds-team${arrowB === '↑' ? ' playoff-track-odds--up' : ''}${arrowB === '↓' ? ' playoff-track-odds--down' : ''}`}
             >
-              {aa} {cur.teamB_pct.toFixed(0)}%{arrowB}
+              {aa} {prob.teamB_pct.toFixed(0)}%{arrowB}
               {deltaBStr ? <span className="muted"> ({deltaBStr})</span> : null}
             </span>
           </p>
           <div className="playoff-track-split" role="presentation" aria-hidden>
             <span
               className="playoff-track-split-a"
-              style={{ flexGrow: Math.max(1, cur.teamA_pct) }}
+              style={{ flexGrow: Math.max(1, prob.teamA_pct) }}
             />
             <span
               className="playoff-track-split-b"
-              style={{ flexGrow: Math.max(1, cur.teamB_pct) }}
+              style={{ flexGrow: Math.max(1, prob.teamB_pct) }}
             />
           </div>
         </div>

@@ -33,6 +33,8 @@ export function PlayoffBracketView({
   simResultsBySeriesId,
   teamColorAccent,
   liveOverlayBySeriesId,
+  simBracketLinePctBySeriesId,
+  simBracketLineSource,
 }: {
   bracket: PlayoffBracket;
   franchiseBySlug: Map<string, Franchise>;
@@ -41,6 +43,9 @@ export function PlayoffBracketView({
   simResultsBySeriesId: Map<string, SimulatedSeriesResult>;
   teamColorAccent: boolean;
   liveOverlayBySeriesId?: Map<string, SeriesLiveOverlay>;
+  /** When set, future series (no live games yet) use these % instead of 50–50 from the static bracket. */
+  simBracketLinePctBySeriesId?: Map<string, { teamA_pct: number; teamB_pct: number }>;
+  simBracketLineSource?: 'monte_carlo' | 'quick';
 }) {
   const { eastR1, eastR2, westR1, westR2, eastCf, westCf, finalSeries } = useMemo(
     () => sliceBracketRounds(bracket),
@@ -52,6 +57,8 @@ export function PlayoffBracketView({
     statsBySlug,
     winnerBySeries,
     teamColorAccent,
+    simBracketLinePctBySeriesId,
+    simBracketLineSource,
   };
 
   const missingLayout = !eastR1 || !eastR2 || !westR1 || !westR2 || !eastCf || !westCf || !finalSeries;
@@ -63,7 +70,13 @@ export function PlayoffBracketView({
       </h2>
       <p className="muted playoff-bracket-hint">
         Series odds use the app’s saved regular-season profile and any completed games merged from the live schedule
-        when available. Hover a probability line for a short template explanation; hover a team row for stat detail.
+        when available.{' '}
+        {simBracketLinePctBySeriesId && simBracketLinePctBySeriesId.size > 0
+          ? simBracketLineSource === 'monte_carlo'
+            ? 'Slots without any games played yet show the weighted Monte Carlo line from your last batch.'
+            : 'Slots without any games played yet show the model line from your last single run.'
+          : null}{' '}
+        Hover a probability line for a short template explanation; hover a team row for stat detail.
       </p>
 
       {missingLayout ? (

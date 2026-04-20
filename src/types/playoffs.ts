@@ -173,11 +173,34 @@ export interface MonteCarloTeamRates {
   conferenceFinalPct: number;
 }
 
+/** One possible pairing for a bracket series slot across Monte Carlo runs. */
+export interface MonteCarloMatchupOption {
+  matchupKey: string;
+  /** Bracket home vs away order from the sim (e.g. `BOS vs TOR`). */
+  matchupLabel: string;
+  /** Share of runs where this exact pairing occurred in this slot (%). */
+  frequencyPct: number;
+  /** Mean model favorite series win % across runs where this pairing occurred. */
+  avgFavoriteSeriesWinPct: number;
+  /** Mean bracket home (team A) series win % for this pairing (for weighted bracket display). */
+  avgTeamAPct: number;
+}
+
+/** All observed pairings + lines for one series id after a Monte Carlo batch. */
+export interface MonteCarloSeriesSlotBreakdown {
+  seriesId: string;
+  roundLabel: string;
+  /** Sorted by frequency descending. */
+  options: MonteCarloMatchupOption[];
+}
+
 export interface MonteCarloSummary {
   iterations: number;
   teams: MonteCarloTeamRates[];
   mostLikelyChampionSlug: string;
   mostLikelyFinalMatchup: { teamA: string; teamB: string; pct: number };
+  /** Per bracket slot: possible matchups, how often, average “line” (favorite %). */
+  seriesMatchupBreakdown: MonteCarloSeriesSlotBreakdown[];
 }
 
 export interface SimulationExplanation {

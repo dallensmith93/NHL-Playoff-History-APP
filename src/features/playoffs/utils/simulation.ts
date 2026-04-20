@@ -4,6 +4,8 @@ import {
   PLAYOFF_TEAM_ENTRY_BY_SLUG,
 } from '../../../data/playoffBracket2026';
 import type {
+  MonteCarloMatchupOption,
+  MonteCarloSeriesSlotBreakdown,
   MonteCarloSummary,
   MonteCarloTeamRates,
   PlayoffBracket,
@@ -17,8 +19,100 @@ import type {
   SimulatedSeriesResult,
 } from '../../../types/playoffs';
 import { calculateSeriesWinProbability } from './seriesProbabilityModel';
+import { resolvePlayoffEntry } from './seriesTracking';
+import { matchupKey as matchupKeyFromAbbrs } from '../services/nhlTeamMap';
 
 export { calculateTeamStrength, calculateSeriesWinProbability } from './seriesProbabilityModel';
+
+/** One row for the “Last single run” matchup + model series line list. */
+export interface QuickSimSeriesLine {
+  seriesId: string;
+  roundLabel: string;
+  homeAbbr: string;
+  awayAbbr: string;
+  homeWins: number;
+  awayWins: number;
+  /** Model favorite’s series win probability (same scale as `SimulatedSeriesResult.favoriteWinProb`). */
+  favoriteSeriesWinPct: number;
+  favoriteAbbr: string;
+  winnerAbbr: string;
+  upset: boolean;
+}
+
+/** Bracket home side series win % from model favorite % and favorite identity. */
+export function teamAWinPctFromSimLine(line: QuickSimSeriesLine): number {
+  const fav = line.favoriteSeriesWinPct;
+  return line.favoriteAbbr === line.homeAbbr ? fav : 100 - fav;
+}
+
+/** Weighted average team A % per series slot from a Monte Carlo batch (for bracket cards). */
+export function computeMonteCarloWeightedSeriesPcts(
+  mc: MonteCarloSummary,
+): Map<string, { teamA_pct: number; teamB_pct: number }> {
+  const out = new Map<string, { teamA_pct: number; teamB_pct: number }>();
+  for (const slot of mc.seriesMatchupBreakdown) {
+    let teamA = 0;
+    for (const opt of slot.options) {
+      teamA += (opt.frequencyPct / 100) * opt.avgTeamAPct;
+    }
+    const a = Math.max(5, Math.min(95, teamA));
+    out.set(slot.seriesId, { teamA_pct: a, teamB_pct: 100 - a });
+  }
+  return out;
+}
+
+/** Single-run team A % per series (for bracket cards when Monte Carlo hasn’t been run). */
+export function computeQuickSimSeriesPcts(
+  result: QuickSimResult,
+  seriesById: Map<string, PlayoffSeries>,
+  teamEntryBySlug: Map<string, PlayoffTeamEntry>,
+): Map<string, { teamA_pct: number; teamB_pct: number }> {
+  const lines = buildQuickSimSeriesLines(result, seriesById, teamEntryBySlug);
+  const out = new Map<string, { teamA_pct: number; teamB_pct: number }>();
+  for (const line of lines) {
+    const raw = teamAWinPctFromSimLine(line);
+    const a = Math.max(5, Math.min(95, raw));
+    out.set(line.seriesId, { teamA_pct: a, teamB_pct: 100 - a });
+  }
+  return out;
+}
+
+/**
+ * Resolve each matchup in bracket order using only winners from earlier games in this run,
+ * and attach the pre-simulation model “line” (favorite’s % to win the series).
+ */
+export function buildQuickSimSeriesLines(
+  result: QuickSimResult,
+  seriesById: Map<string, PlayoffSeries>,
+  teamEntryBySlug: Map<string, PlayoffTeamEntry>,
+): QuickSimSeriesLine[] {
+  const winners = new Map<string, string>();
+  const out: QuickSimSeriesLine[] = [];
+  for (const r of result.seriesResults) {
+    const s = seriesById.get(r.seriesId);
+    if (!s) continue;
+    const home = resolvePlayoffEntry(s.home, winners, teamEntryBySlug);
+    const away = resolvePlayoffEntry(s.away, winners, teamEntryBySlug);
+    if (!home || !away) continue;
+    const favSlug = r.upset ? r.loserSlug : r.winnerSlug;
+    const favoriteAbbr = teamEntryBySlug.get(favSlug)?.abbr ?? '?';
+    const winnerAbbr = teamEntryBySlug.get(r.winnerSlug)?.abbr ?? '?';
+    out.push({
+      seriesId: r.seriesId,
+      roundLabel: s.roundLabel,
+      homeAbbr: home.abbr,
+      awayAbbr: away.abbr,
+      homeWins: r.homeWins,
+      awayWins: r.awayWins,
+      favoriteSeriesWinPct: r.favoriteWinProb * 100,
+      favoriteAbbr,
+      winnerAbbr,
+      upset: r.upset,
+    });
+    winners.set(r.seriesId, r.winnerSlug);
+  }
+  return out;
+}
 
 function resolveRef(
   ref: PlayoffTeamRef,
@@ -264,6 +358,11 @@ export function runMonteCarlo(
   const finals = new Map<string, number>();
   const cf = new Map<string, number>();
   const finalMatchup = new Map<string, number>();
+  /** seriesId → canonical matchup key → counts & sums for averaging */
+  const slotAcc = new Map<
+    string,
+    Map<string, { count: number; sumFav: number; sumTeamA: number; label: string }>
+  >();
 
   for (const s of slugs) {
     cup.set(s, 0);
@@ -290,6 +389,46 @@ export function runMonteCarlo(
 
     const key = [run.easternChampionSlug, run.westernChampionSlug].sort().join('|');
     finalMatchup.set(key, (finalMatchup.get(key) ?? 0) + 1);
+
+    const lines = buildQuickSimSeriesLines(run, seriesById, PLAYOFF_TEAM_ENTRY_BY_SLUG);
+    for (const line of lines) {
+      const mk = matchupKeyFromAbbrs(line.homeAbbr, line.awayAbbr);
+      const label = `${line.homeAbbr} vs ${line.awayAbbr}`;
+      const teamA = teamAWinPctFromSimLine(line);
+      let m = slotAcc.get(line.seriesId);
+      if (!m) {
+        m = new Map();
+        slotAcc.set(line.seriesId, m);
+      }
+      const cur = m.get(mk);
+      if (!cur) {
+        m.set(mk, { count: 1, sumFav: line.favoriteSeriesWinPct, sumTeamA: teamA, label });
+      } else {
+        cur.count += 1;
+        cur.sumFav += line.favoriteSeriesWinPct;
+        cur.sumTeamA += teamA;
+      }
+    }
+  }
+
+  const seriesMatchupBreakdown: MonteCarloSeriesSlotBreakdown[] = [];
+  for (const sid of bracket.seriesOrder) {
+    const m = slotAcc.get(sid);
+    if (!m || m.size === 0) continue;
+    const s = seriesById.get(sid);
+    const options: MonteCarloMatchupOption[] = [...m.entries()].map(([matchupKey, v]) => ({
+      matchupKey,
+      matchupLabel: v.label,
+      frequencyPct: (v.count / iterations) * 100,
+      avgFavoriteSeriesWinPct: v.sumFav / v.count,
+      avgTeamAPct: v.sumTeamA / v.count,
+    }));
+    options.sort((a, b) => b.frequencyPct - a.frequencyPct);
+    seriesMatchupBreakdown.push({
+      seriesId: sid,
+      roundLabel: s?.roundLabel ?? sid,
+      options,
+    });
   }
 
   let bestFinal = { teamA: '', teamB: '', pct: 0 };
@@ -322,6 +461,7 @@ export function runMonteCarlo(
     teams,
     mostLikelyChampionSlug,
     mostLikelyFinalMatchup: bestFinal,
+    seriesMatchupBreakdown,
   };
 }
 

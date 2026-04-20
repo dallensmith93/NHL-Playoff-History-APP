@@ -75,21 +75,34 @@ export function getProbabilityDelta(
   };
 }
 
+/** Standings line from win counts (team A = bracket home). */
+export function formatSeriesStandingsFromWins(
+  homeWins: number,
+  awayWins: number,
+  homeEntry: PlayoffTeamEntry | undefined,
+  awayEntry: PlayoffTeamEntry | undefined,
+): string {
+  if (homeWins === 0 && awayWins === 0) return 'Series not started';
+  if (homeWins === awayWins) return `Tied ${homeWins}-${awayWins}`;
+  const homeLeads = homeWins > awayWins;
+  const lead = homeLeads ? homeWins : awayWins;
+  const trail = homeLeads ? awayWins : homeWins;
+  const leader = homeLeads ? homeEntry : awayEntry;
+  const leaderName = leader?.abbr ?? '—';
+  return `${leaderName} leads ${lead}-${trail}`;
+}
+
 export function formatSeriesScore(
   series: PlayoffSeries,
   homeEntry: PlayoffTeamEntry | undefined,
   awayEntry: PlayoffTeamEntry | undefined,
 ): string {
-  const hw = series.seriesScore.teamA_wins;
-  const aw = series.seriesScore.teamB_wins;
-  if (hw === 0 && aw === 0) return 'Series not started';
-  if (hw === aw) return `Tied ${hw}-${aw}`;
-  const homeLeads = hw > aw;
-  const lead = homeLeads ? hw : aw;
-  const trail = homeLeads ? aw : hw;
-  const leader = homeLeads ? homeEntry : awayEntry;
-  const leaderName = leader?.abbr ?? '—';
-  return `${leaderName} leads ${lead}-${trail}`;
+  return formatSeriesStandingsFromWins(
+    series.seriesScore.teamA_wins,
+    series.seriesScore.teamB_wins,
+    homeEntry,
+    awayEntry,
+  );
 }
 
 export function getLastGameSummary(
