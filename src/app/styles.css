@@ -1210,10 +1210,22 @@ h3,
   line-height: 1.35;
 }
 
+/* Softer label + readable score — pure --muted was too low-contrast on dark cards (e.g. Opera). */
 .playoff-bracket-foot-bestof {
   font-weight: 400;
-  color: var(--muted);
-  letter-spacing: 0.01em;
+  color: color-mix(in srgb, var(--text) 38%, var(--muted));
+  letter-spacing: 0.02em;
+}
+
+.playoff-bracket-foot-sep {
+  color: color-mix(in srgb, var(--muted) 75%, var(--text));
+  font-weight: 400;
+}
+
+.playoff-bracket-foot-record {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
 }
 
 .playoff-bracket-sim-winner {

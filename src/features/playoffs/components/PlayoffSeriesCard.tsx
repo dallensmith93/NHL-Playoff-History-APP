@@ -308,8 +308,12 @@ export function PlayoffSeriesCard({
           <span className="playoff-bracket-foot-bestof">
             Best of {series.winsToWin * 2 - 1}
           </span>
-          {' · '}
-          {displayHomeWins}-{displayAwayWins}
+          <span className="playoff-bracket-foot-sep" aria-hidden>
+            {' · '}
+          </span>
+          <span className="playoff-bracket-foot-record">
+            {displayHomeWins}-{displayAwayWins}
+          </span>
           {simResult ? <span className="muted"> (run)</span> : null}
         </span>
         <span className="muted">· {liveOverlay?.bracketStatusLabel ?? statusLabel}</span>
