@@ -1565,6 +1565,24 @@ h3,
   color: #fff;
 }
 
+.live-score-badge--ot {
+  background: #ca8a04;
+  color: #1c1917;
+}
+
+[data-theme='dark'] .live-score-badge--ot {
+  background: #eab308;
+  color: #1c1917;
+}
+
+.live-score-clock {
+  font-family: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  font-weight: 600;
+  min-width: 2.25rem;
+}
+
 .live-score-detail {
   font-size: 0.75rem;
   max-width: 9rem;

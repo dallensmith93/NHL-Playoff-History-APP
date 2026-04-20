@@ -113,6 +113,87 @@ function parseNhleScheduleJson(data: unknown, winStart: string, winEnd: string):
   return out;
 }
 
+/** Gamecenter landing — clock + period type for live games (schedule row alone has no countdown). */
+interface NhleLandingClock {
+  timeRemaining?: string;
+  secondsRemaining?: number;
+  running?: boolean;
+  inIntermission?: boolean;
+}
+
+interface NhleLanding {
+  periodDescriptor?: { number?: number; periodType?: string };
+  clock?: NhleLandingClock;
+}
+
+async function fetchGameCenterLanding(gamePk: number, signal?: AbortSignal): Promise<NhleLanding | null> {
+  try {
+    const url = nhleWebPath(`/v1/gamecenter/${gamePk}/landing`);
+    const res = await fetch(url, {
+      signal,
+      credentials: 'omit',
+      headers: { Accept: 'application/json' },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as NhleLanding;
+  } catch {
+    return null;
+  }
+}
+
+function periodFlagsFromDescriptor(pd: { number?: number; periodType?: string } | undefined): {
+  isOvertime: boolean;
+  isShootout: boolean;
+} {
+  if (!pd) return { isOvertime: false, isShootout: false };
+  const pt = String(pd.periodType ?? '').toUpperCase();
+  if (pt === 'SO') return { isOvertime: false, isShootout: true };
+  if (pt === 'OT') return { isOvertime: true, isShootout: false };
+  return { isOvertime: false, isShootout: false };
+}
+
+/** Merge `/v1/gamecenter/{id}/landing` for in-progress rows so the strip can show clock + OT/SO. */
+async function enrichLiveGamesWithGameCenter(
+  games: LivePlayoffGame[],
+  signal?: AbortSignal,
+): Promise<LivePlayoffGame[]> {
+  const need = games.filter((g) => g.state === 'live' || g.state === 'unknown');
+  if (need.length === 0) return games;
+
+  const results = await Promise.all(
+    need.map((g) => fetchGameCenterLanding(g.gamePk, signal).then((land) => ({ g, land }))),
+  );
+
+  const patch = new Map<number, Partial<LivePlayoffGame>>();
+  for (const { g, land } of results) {
+    if (!land) continue;
+    const clk = land.clock;
+    const pd = land.periodDescriptor;
+    const extras: Partial<LivePlayoffGame> = {};
+
+    if (clk) {
+      if (clk.timeRemaining !== undefined) extras.clockTimeRemaining = clk.timeRemaining;
+      if (clk.secondsRemaining !== undefined) extras.clockSecondsRemaining = clk.secondsRemaining;
+      if (clk.inIntermission !== undefined) extras.inIntermission = clk.inIntermission;
+    }
+
+    if (pd) {
+      const { isOvertime, isShootout } = periodFlagsFromDescriptor(pd);
+      extras.isOvertime = isOvertime;
+      extras.isShootout = isShootout;
+      if (pd.number && pd.number > 0) {
+        const ord = nhlePeriodOrdinal(pd.number);
+        const pt = pd.periodType ?? '';
+        extras.liveDetailLine = [ord, pt].filter(Boolean).join(' · ');
+      }
+    }
+
+    if (Object.keys(extras).length > 0) patch.set(g.gamePk, extras);
+  }
+
+  return games.map((g) => ({ ...g, ...patch.get(g.gamePk) }));
+}
+
 /** Pull schedule for the date window from NHL Web (week anchors). Browser uses this only — no statsapi DNS/proxy. */
 async function fetchScheduleJsonFromNhle(
   opts: FetchScoreboardOptions,
@@ -172,9 +253,10 @@ export async function fetchPlayoffScoreboard(
   try {
     const nhleGames = await fetchScheduleJsonFromNhle(opts);
     if (nhleGames !== null) {
+      const games = await enrichLiveGamesWithGameCenter(nhleGames, opts.signal);
       const fetchedAt = new Date().toISOString();
-      writeCachedScoreboard(nhleGames, fetchedAt);
-      return { games: nhleGames, source, fetchedAt, usedFallback: false };
+      writeCachedScoreboard(games, fetchedAt);
+      return { games, source, fetchedAt, usedFallback: false };
     }
 
     throw new Error('NHL schedule unavailable');

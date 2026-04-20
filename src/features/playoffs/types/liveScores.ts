@@ -13,8 +13,17 @@ export interface LivePlayoffGame {
   awayScore: number;
   /** True when the NHL feed marks the game as final. */
   isFinal: boolean;
-  /** Best-effort period/clock summary for live games. */
+  /** Best-effort period/clock summary for live games (schedule row). */
   liveDetailLine?: string;
+  /** From gamecenter landing — time left in period, e.g. `12:34` or `00:00`. */
+  clockTimeRemaining?: string;
+  clockSecondsRemaining?: number;
+  /** From gamecenter landing — between periods. */
+  inIntermission?: boolean;
+  /** Regulation overtime (not shootout). */
+  isOvertime?: boolean;
+  /** Shootout period. */
+  isShootout?: boolean;
   gameType?: string;
   /** True only for NHL playoff games (gameType 3). Bracket merge uses this; score strip shows all types. */
   isPlayoffGame?: boolean;

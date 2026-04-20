@@ -107,6 +107,16 @@ export function LiveScoreStrip({ games }: { games: LivePlayoffGame[] }) {
                       ? 'Game'
                       : g.state}
             </span>
+            {(g.state === 'live' || g.state === 'unknown') &&
+              (g.isShootout ? (
+                <span className="live-score-badge live-score-badge--ot" title="Shootout">
+                  SO
+                </span>
+              ) : g.isOvertime ? (
+                <span className="live-score-badge live-score-badge--ot" title="Overtime">
+                  OT
+                </span>
+              ) : null)}
             {g.state === 'scheduled' ? (
               <>
                 <span className="live-score-abbr">{g.awayAbbr}</span>
@@ -123,6 +133,13 @@ export function LiveScoreStrip({ games }: { games: LivePlayoffGame[] }) {
                 <span className="live-score-num">{g.homeScore}</span>
                 {g.liveDetailLine ? (
                   <span className="live-score-detail muted">{g.liveDetailLine}</span>
+                ) : null}
+                {(g.state === 'live' || g.state === 'unknown') &&
+                (g.inIntermission ||
+                  (g.clockTimeRemaining !== undefined && g.clockTimeRemaining !== '')) ? (
+                  <span className="live-score-clock" title={g.inIntermission ? 'Intermission' : 'Time remaining'}>
+                    {g.inIntermission ? 'INT' : g.clockTimeRemaining}
+                  </span>
                 ) : null}
               </>
             )}
