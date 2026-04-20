@@ -220,6 +220,8 @@ export function PlayoffsBracketPage() {
 
   return (
     <div className="playoffs-bracket-page">
+      <LiveScoreStrip games={liveGames} />
+
       <div className="page-hero">
         <h1>{bracket.title}</h1>
         <p className="lede">
@@ -254,11 +256,10 @@ export function PlayoffsBracketPage() {
                 checked={pp.playoffLiveAutoRefresh !== false}
                 onChange={(e) => setPlayoffPredictor({ playoffLiveAutoRefresh: e.target.checked })}
               />
-              Auto-refresh while games are live (~45s)
+              Auto-refresh scores (about every 5s while live, else ~10–14s)
             </label>
           </div>
         </div>
-        <LiveScoreStrip games={liveGames} />
       </section>
 
       <PlayoffScoresByRound bracket={bracket} winnerBySeries={winnerBySeries} />

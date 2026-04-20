@@ -1405,6 +1405,16 @@ h3,
   color: var(--surface-1);
 }
 
+.live-score-badge--final {
+  background: #b91c1c;
+  color: #fff;
+}
+
+[data-theme='dark'] .live-score-badge--final {
+  background: #dc2626;
+  color: #fff;
+}
+
 .live-score-detail {
   font-size: 0.75rem;
   max-width: 9rem;

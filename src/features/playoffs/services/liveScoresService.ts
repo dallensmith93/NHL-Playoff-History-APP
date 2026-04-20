@@ -48,7 +48,8 @@ interface NhleScheduleGame {
 
 function mapNhleGameState(gs: string | undefined): LiveGameState {
   const u = gs?.toUpperCase() ?? '';
-  if (u === 'OFF') return 'final';
+  /** `OFF` is the usual post-game flag; playoff rows often use `FINAL` before/instead of `OFF`. */
+  if (u === 'OFF' || u === 'FINAL') return 'final';
   if (u === 'LIVE') return 'live';
   if (u === 'FUT' || u === 'PRE') return 'scheduled';
   return 'unknown';

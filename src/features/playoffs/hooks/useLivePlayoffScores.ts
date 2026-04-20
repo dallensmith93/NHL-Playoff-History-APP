@@ -14,11 +14,14 @@ import { fetchPlayoffScoreboard, getDefaultScheduleWindow } from '../services/li
 import type { LivePlayoffGame, LiveDataSource } from '../types/liveScores';
 import { mergeBracketWithLive, indexLiveGamesByMatchup } from '../utils/mergeBracketWithLive';
 
-const POLL_MS = 30_000;
-/** Keep polling after the last "live" snapshot so we catch the switch to Final and merge series wins. */
-const POST_LIVE_POLL_MS = 8 * 60_000;
-/** Extra fetch shortly after a live game is seen—API often lags when flipping Live → Final. */
-const CATCH_FINAL_FETCH_MS = 15_000;
+/** Base cadence when the feed is quiet — still frequent enough to pick up finals quickly. */
+const POLL_MS_IDLE = 14_000;
+/** While any game is live, poll aggressively. */
+const POLL_MS_LIVE = 5_000;
+/** Slightly slower right after live ends (feed can lag Live → Final). */
+const POST_LIVE_POLL_MS = 5 * 60_000;
+/** Extra fetch shortly after a live game is seen — API often lags when flipping Live → Final. */
+const CATCH_FINAL_FETCH_MS = 6_000;
 
 /** Include feed rows unless they are explicitly non-playoff or preseason — ambiguous rows still merge. */
 function isPlayoffRow(g: LivePlayoffGame): boolean {
@@ -61,12 +64,13 @@ export function useLivePlayoffScores(options?: {
   const liveGamesRef = useRef<LivePlayoffGame[]>([]);
   const pollAfterLiveUntilRef = useRef(0);
   const catchFinalTimerRef = useRef<number | null>(null);
+  const loadRef = useRef<(opts?: { silent?: boolean }) => Promise<void>>(async () => {});
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     const win = getDefaultScheduleWindow();
     const res = await fetchPlayoffScoreboard({
       startDate: win.start,
@@ -85,13 +89,13 @@ export function useLivePlayoffScores(options?: {
       pollAfterLiveUntilRef.current = Date.now() + POST_LIVE_POLL_MS;
       catchFinalTimerRef.current = window.setTimeout(() => {
         catchFinalTimerRef.current = null;
-        void load();
+        void load({ silent: true });
       }, CATCH_FINAL_FETCH_MS);
     }
     if (livePlayoff.some((g) => g.state === 'unknown')) {
       pollAfterLiveUntilRef.current = Math.max(
         pollAfterLiveUntilRef.current,
-        Date.now() + 3 * 60_000,
+        Date.now() + 90_000,
       );
     }
     setSource(res.source);
@@ -100,6 +104,8 @@ export function useLivePlayoffScores(options?: {
     setUsedFallback(!!res.usedFallback);
     setLoading(false);
   }, []);
+
+  loadRef.current = load;
 
   useEffect(() => {
     void load();
@@ -119,24 +125,35 @@ export function useLivePlayoffScores(options?: {
 
   useEffect(() => {
     if (options?.pollDisabled) return;
-    const id = window.setInterval(() => {
-      const games = liveGamesRef.current;
-      const playoff = games.filter(isPlayoffRow);
-      const hasLiveNow = playoff.some((g) => g.state === 'live');
-      const keepPolling = hasLiveNow || Date.now() < pollAfterLiveUntilRef.current;
-      if (!keepPolling) return;
-      void load();
-    }, POLL_MS);
-    return () => window.clearInterval(id);
-  }, [load, options?.pollDisabled]);
+    let cancelled = false;
+    let timer: number | undefined;
+
+    const tick = () => {
+      const playoff = liveGamesRef.current.filter(isPlayoffRow);
+      const hasLive = playoff.some((g) => g.state === 'live');
+      const inPostLive = Date.now() < pollAfterLiveUntilRef.current;
+      const ms = hasLive ? POLL_MS_LIVE : inPostLive ? 10_000 : POLL_MS_IDLE;
+      timer = window.setTimeout(async () => {
+        if (cancelled) return;
+        await loadRef.current({ silent: true });
+        if (!cancelled) tick();
+      }, ms);
+    };
+
+    tick();
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [options?.pollDisabled]);
 
   useEffect(() => {
     const onVis = () => {
-      if (document.visibilityState === 'visible') void load();
+      if (document.visibilityState === 'visible') void loadRef.current({ silent: true });
     };
     document.addEventListener('visibilitychange', onVis);
     return () => document.removeEventListener('visibilitychange', onVis);
-  }, [load]);
+  }, []);
 
   const bracket = useMemo(() => {
     if (playoffGames.length === 0) {
@@ -154,6 +171,10 @@ export function useLivePlayoffScores(options?: {
   /** Matchup index for playoff games only (bracket merge + series overlays). */
   const liveIndex = useMemo(() => indexLiveGamesByMatchup(playoffGames), [playoffGames]);
 
+  const refresh = useCallback(() => {
+    void load();
+  }, [load]);
+
   return {
     bracket,
     liveGames,
@@ -162,7 +183,7 @@ export function useLivePlayoffScores(options?: {
     fetchedAt,
     error,
     usedFallback,
-    refresh: load,
+    refresh,
     loading,
   };
 }
