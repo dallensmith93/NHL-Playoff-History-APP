@@ -9,7 +9,6 @@ import type { PlayoffSimModePersisted } from '../../../types/persistence';
 import { VisitorRegionNote } from '../../../components/VisitorRegionNote';
 import { GameBettingLinesStrip } from '../components/GameBettingLinesStrip';
 import { LiveScoresMarquee } from '../components/LiveScoresMarquee';
-import { NhlHeadlinesTicker } from '../components/NhlHeadlinesTicker';
 import { PlayoffBracketView } from '../components/PlayoffBracketView';
 import { PlayoffScoresByRound } from '../components/PlayoffScoresByRound';
 import { PredictionSummary } from '../components/PredictionSummary';
@@ -276,7 +275,6 @@ export function PlayoffsBracketPage() {
         oddsError={partnerOddsError}
       />
       <LiveScoresMarquee games={todayStripGames} />
-      <NhlHeadlinesTicker />
 
       <div className="page-hero">
         <h1>{bracket.title}</h1>

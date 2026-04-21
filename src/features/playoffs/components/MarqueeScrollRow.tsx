@@ -3,12 +3,10 @@ import { useCallback, useRef, type KeyboardEvent, type ReactNode } from 'react';
 export function MarqueeScrollRow({
   children,
   ariaLabel,
-  variant,
 }: {
   children: ReactNode;
-  /** Accessible name for the scrollable region (e.g. scores vs stories). */
+  /** Accessible name for the scrollable region. */
   ariaLabel: string;
-  variant: 'scores' | 'news';
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
 
@@ -33,7 +31,7 @@ export function MarqueeScrollRow({
   );
 
   return (
-    <div className={`marquee-broadcast-strip-wrap marquee-broadcast-strip-wrap--${variant}`}>
+    <div className="marquee-broadcast-strip-wrap marquee-broadcast-strip-wrap--scores">
       <button
         type="button"
         className="marquee-broadcast-scroll-btn"

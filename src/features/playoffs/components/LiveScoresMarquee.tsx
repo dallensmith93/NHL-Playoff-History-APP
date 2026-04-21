@@ -49,7 +49,7 @@ export function LiveScoresMarquee({ games }: { games: LivePlayoffGame[] }) {
         </div>
       </header>
       <div className="marquee-broadcast-tape">
-        <MarqueeScrollRow ariaLabel="Today’s game scores" variant="scores">
+        <MarqueeScrollRow ariaLabel="Today’s game scores">
           {games.map((g) => (
             <span key={g.gamePk} className="marquee-broadcast-chunk marquee-broadcast-chunk--score">
               {segmentForGame(g)}

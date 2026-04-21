@@ -1947,7 +1947,6 @@ h3,
   --broadcast-tape-dim: #b4bcc8;
   --broadcast-tape-edge: #151b24;
   --broadcast-badge-scores: #c8102e;
-  --broadcast-badge-news: #1566c8;
   --broadcast-badge-text: #fff;
 }
 
@@ -1959,7 +1958,6 @@ h3,
   --broadcast-tape-dim: #aeb6c2;
   --broadcast-tape-edge: #0f141c;
   --broadcast-badge-scores: #e31837;
-  --broadcast-badge-news: #3d8ced;
   --broadcast-badge-text: #fff;
 }
 
@@ -1974,10 +1972,6 @@ h3,
 
 .marquee-broadcast--scores {
   border-left: 4px solid var(--broadcast-badge-scores);
-}
-
-.marquee-broadcast--news {
-  border-left: 4px solid var(--broadcast-badge-news);
 }
 
 .marquee-broadcast-top {
@@ -2006,11 +2000,6 @@ h3,
   color: var(--broadcast-badge-text);
   background: var(--broadcast-badge-scores);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.marquee-broadcast-badge--news {
-  background: var(--broadcast-badge-news);
-  letter-spacing: 0.08em;
 }
 
 .marquee-broadcast-headline {
@@ -2065,16 +2054,12 @@ h3,
   color: var(--broadcast-tape-dim);
 }
 
-/* Manual horizontal scroll (scores + news) — replaces auto-marquee */
+/* Manual horizontal scroll for scores strip */
 .marquee-broadcast-strip-wrap {
   display: flex;
   align-items: stretch;
   gap: 0.35rem;
   padding: 0 0.35rem;
-}
-
-.marquee-broadcast-strip-wrap--news {
-  align-items: stretch;
 }
 
 .marquee-broadcast-scroll-btn {
@@ -2106,7 +2091,7 @@ h3,
 }
 
 .marquee-broadcast-scroll-btn:focus-visible {
-  outline: 2px solid var(--broadcast-badge-news);
+  outline: 2px solid var(--broadcast-badge-scores);
   outline-offset: 2px;
 }
 
@@ -2123,7 +2108,7 @@ h3,
 }
 
 .marquee-broadcast-scroll-scroller:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--broadcast-badge-news) 80%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--broadcast-badge-scores) 80%, transparent);
   outline-offset: -2px;
 }
 
@@ -2146,7 +2131,7 @@ h3,
   scroll-snap-stop: normal;
 }
 
-/* One game or one brief — padded “tile” so the crawl is easy to scan */
+/* One game — padded “tile” so the crawl is easy to scan */
 .marquee-broadcast-chunk {
   flex: 0 0 auto;
   border-radius: 12px;
@@ -2172,27 +2157,6 @@ h3,
   white-space: nowrap;
 }
 
-.marquee-broadcast-chunk--news {
-  display: block;
-  max-width: min(28rem, 86vw);
-  padding: 0.85rem 1.35rem;
-  font-family: var(--font-sans);
-  font-size: 0.98rem;
-  font-weight: 400;
-  letter-spacing: 0.02em;
-  line-height: 1.8;
-  color: color-mix(in srgb, var(--broadcast-tape-text) 98%, var(--broadcast-tape-dim));
-  white-space: normal;
-}
-
-.marquee-broadcast-chunk--manual {
-  border-color: color-mix(in srgb, var(--broadcast-badge-news) 55%, rgba(255, 255, 255, 0.12));
-  background: color-mix(in srgb, var(--broadcast-badge-news) 14%, rgba(255, 255, 255, 0.07));
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--broadcast-badge-news) 35%, transparent),
-    0 6px 18px rgba(0, 0, 0, 0.22);
-}
-
 @media (max-width: 520px) {
   .marquee-broadcast-scroll-btn {
     width: 2.35rem;
@@ -2209,10 +2173,6 @@ h3,
 @media (prefers-reduced-motion: reduce) {
   .marquee-broadcast-scroll-scroller {
     mask-image: none;
-  }
-
-  .marquee-broadcast-chunk--news {
-    max-width: min(28rem, 100%);
   }
 }
 
