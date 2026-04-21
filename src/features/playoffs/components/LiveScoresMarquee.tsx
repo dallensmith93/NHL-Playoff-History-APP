@@ -1,4 +1,5 @@
 import type { LivePlayoffGame } from '../types/liveScores';
+import { MarqueeScrollRow } from './MarqueeScrollRow';
 
 function overtimeLabel(g: LivePlayoffGame): string | null {
   if (g.isShootout) return 'SO';
@@ -27,18 +28,6 @@ function segmentForGame(g: LivePlayoffGame): string {
   return `${g.awayAbbr} ${g.awayScore} @ ${g.homeAbbr} ${g.homeScore}${tail ? ` · ${tail}` : ''}${tvSuffix(g)}`;
 }
 
-function ScoreChunkGroup({ games, idSuffix }: { games: LivePlayoffGame[]; idSuffix: string }) {
-  return (
-    <>
-      {games.map((g) => (
-        <span key={`${g.gamePk}${idSuffix}`} className="marquee-broadcast-chunk marquee-broadcast-chunk--score">
-          {segmentForGame(g)}
-        </span>
-      ))}
-    </>
-  );
-}
-
 export function LiveScoresMarquee({ games }: { games: LivePlayoffGame[] }) {
   if (games.length === 0) return null;
 
@@ -54,20 +43,19 @@ export function LiveScoresMarquee({ games }: { games: LivePlayoffGame[] }) {
         </span>
         <div className="marquee-broadcast-headline">
           <span className="marquee-broadcast-title">Today&apos;s games</span>
-          <span className="marquee-broadcast-sub">Local calendar date · NHL schedule feed</span>
+          <span className="marquee-broadcast-sub">
+            Local calendar date · NHL schedule feed · Scroll sideways (or use the arrows) to pick a game to focus on
+          </span>
         </div>
       </header>
       <div className="marquee-broadcast-tape">
-        <div className="marquee-broadcast-clip">
-          <div className="marquee-broadcast-track marquee-broadcast-track--scores">
-            <div className="marquee-broadcast-group">
-              <ScoreChunkGroup games={games} idSuffix="" />
-            </div>
-            <div className="marquee-broadcast-group" aria-hidden="true">
-              <ScoreChunkGroup games={games} idSuffix="-b" />
-            </div>
-          </div>
-        </div>
+        <MarqueeScrollRow ariaLabel="Today’s game scores" variant="scores">
+          {games.map((g) => (
+            <span key={g.gamePk} className="marquee-broadcast-chunk marquee-broadcast-chunk--score">
+              {segmentForGame(g)}
+            </span>
+          ))}
+        </MarqueeScrollRow>
       </div>
     </div>
   );

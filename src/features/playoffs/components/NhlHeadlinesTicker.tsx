@@ -1,12 +1,16 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MANUAL_NHL_NEWS_BRIEFS } from '../data/manualNhlNewsBriefs';
 import {
   enrichBlurbsSequential,
   excerptFromRssDescription,
   plainText,
 } from '../services/espnStoryExcerpt';
+import { MarqueeScrollRow } from './MarqueeScrollRow';
 
 const ESPN_NHL_RSS = 'https://www.espn.com/espn/rss/nhl/news';
+
+/** Pick up fresh playoff + regional stories a bit faster than the default ESPN order. */
+const RSS_POLL_MS = 3 * 60_000;
 
 export interface NhlStoryRow {
   /** Used only for playoff relevance sort — not shown in the ticker. */
@@ -23,6 +27,9 @@ function playoffBoost(title: string, blurb: string): number {
   if (t.includes('stanley')) n += 3;
   if (t.includes('cup')) n += 1;
   if (t.includes('game')) n += 0.5;
+  if (t.includes('mammoth')) n += 2.5;
+  if (t.includes('utah')) n += 1.2;
+  if (t.includes('durzi')) n += 1.5;
   return n;
 }
 
@@ -43,61 +50,86 @@ function parseRss(xml: string): NhlStoryRow[] {
   return out;
 }
 
+type ManualRow = {
+  title: string;
+  link: string;
+  blurb: string;
+  supersededWhen?: (row: { title: string; link: string; blurb: string }) => boolean;
+};
+
 export function NhlHeadlinesTicker() {
   const [stories, setStories] = useState<NhlStoryRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const manualRows = useMemo(
+  const manualRows: ManualRow[] = useMemo(
     () =>
       MANUAL_NHL_NEWS_BRIEFS.map((m) => ({
         title: m.id,
         link: `manual:${m.id}`,
         blurb: m.blurb,
+        supersededWhen: m.supersededWhen,
       })),
     [],
   );
 
+  const loadStories = useCallback(async () => {
+    try {
+      const res = await fetch(ESPN_NHL_RSS, { credentials: 'omit' });
+      if (!res.ok) throw new Error(`RSS ${res.status}`);
+      const xml = await res.text();
+      const parsed = parseRss(xml);
+      const sorted = [...parsed].sort(
+        (a, b) => playoffBoost(b.title, b.blurb) - playoffBoost(a.title, a.blurb),
+      );
+      if (sorted.length > 0) setStories(sorted);
+      else setStories([]);
+      setError(null);
+
+      if (sorted.length > 0) {
+        await enrichBlurbsSequential(sorted, (link, blurb) => {
+          setStories((prev) => prev.map((s) => (s.link === link ? { ...s, blurb } : s)));
+        });
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not load headlines');
+      setStories([]);
+    }
+  }, []);
+
+  const loadStoriesRef = useRef(loadStories);
+  loadStoriesRef.current = loadStories;
+
   useEffect(() => {
     let cancelled = false;
-    const load = async () => {
-      try {
-        const res = await fetch(ESPN_NHL_RSS, { credentials: 'omit' });
-        if (!res.ok) throw new Error(`RSS ${res.status}`);
-        const xml = await res.text();
-        if (cancelled) return;
-        const parsed = parseRss(xml);
-        const sorted = [...parsed].sort(
-          (a, b) => playoffBoost(b.title, b.blurb) - playoffBoost(a.title, a.blurb),
-        );
-        if (sorted.length > 0) setStories(sorted);
-        else setStories([]);
-        setError(null);
-
-        if (sorted.length > 0 && !cancelled) {
-          await enrichBlurbsSequential(sorted, (link, blurb) => {
-            if (cancelled) return;
-            setStories((prev) => prev.map((s) => (s.link === link ? { ...s, blurb } : s)));
-          });
-        }
-      } catch (e) {
-        if (cancelled) return;
-        setError(e instanceof Error ? e.message : 'Could not load headlines');
-        setStories([]);
-      }
+    const run = async () => {
+      if (cancelled) return;
+      await loadStoriesRef.current();
     };
-    void load();
-    const t = window.setInterval(load, 15 * 60_000);
+    void run();
+    const t = window.setInterval(run, RSS_POLL_MS);
     return () => {
       cancelled = true;
       clearInterval(t);
     };
   }, []);
 
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void loadStoriesRef.current();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
   const feedPending = stories.length === 0 && !error;
 
   const briefs = useMemo(() => {
-    const fromFeed = stories.filter((s) => plainText(s.blurb).length >= 14).slice(0, 16);
-    return [...manualRows, ...fromFeed].slice(0, 20);
+    const fromFeed = stories.filter((s) => plainText(s.blurb).length >= 14).slice(0, 18);
+    const activeManual = manualRows.filter((m) => {
+      if (!m.supersededWhen) return true;
+      return !fromFeed.some((row) => m.supersededWhen(row));
+    });
+    return [...activeManual, ...fromFeed].slice(0, 22);
   }, [stories, manualRows]);
 
   return (
@@ -109,8 +141,9 @@ export function NhlHeadlinesTicker() {
         <div className="marquee-broadcast-headline">
           <span className="marquee-broadcast-title">Briefs</span>
           <span className="marquee-broadcast-sub">
-            Latest curated items first, then story excerpts from ESPN (not headlines). When the feed only has teaser
-            questions, we pull the first lines of the article text as a short summary.
+            ESPN stories auto-refresh about every {RSS_POLL_MS / 60_000} minutes and when you return to this tab. Curated
+            tiles drop away when the same story appears in the feed. Scroll sideways (trackpad, touch, or arrows) to read
+            what you want.
             {feedPending ? ' · Fetching the RSS feed…' : ''}
           </span>
         </div>
@@ -121,38 +154,20 @@ export function NhlHeadlinesTicker() {
         </p>
       ) : null}
       <div className="marquee-broadcast-tape">
-        <div className="marquee-broadcast-clip">
-          <div className="marquee-broadcast-track marquee-broadcast-track--news">
-            <div className="marquee-broadcast-group">
-              {briefs.map((h, i) => (
-                <span
-                  key={`brief-${i}-${h.link}`}
-                  className={
-                    h.link.startsWith('manual:')
-                      ? 'marquee-broadcast-chunk marquee-broadcast-chunk--news marquee-broadcast-chunk--manual'
-                      : 'marquee-broadcast-chunk marquee-broadcast-chunk--news'
-                  }
-                >
-                  {h.blurb}
-                </span>
-              ))}
-            </div>
-            <div className="marquee-broadcast-group" aria-hidden="true">
-              {briefs.map((h, i) => (
-                <span
-                  key={`brief-dup-${i}-${h.link}`}
-                  className={
-                    h.link.startsWith('manual:')
-                      ? 'marquee-broadcast-chunk marquee-broadcast-chunk--news marquee-broadcast-chunk--manual'
-                      : 'marquee-broadcast-chunk marquee-broadcast-chunk--news'
-                  }
-                >
-                  {h.blurb}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
+        <MarqueeScrollRow ariaLabel="NHL news briefs" variant="news">
+          {briefs.map((h, i) => (
+            <span
+              key={`brief-${i}-${h.link}`}
+              className={
+                h.link.startsWith('manual:')
+                  ? 'marquee-broadcast-chunk marquee-broadcast-chunk--news marquee-broadcast-chunk--manual'
+                  : 'marquee-broadcast-chunk marquee-broadcast-chunk--news'
+              }
+            >
+              {h.blurb}
+            </span>
+          ))}
+        </MarqueeScrollRow>
       </div>
     </div>
   );
