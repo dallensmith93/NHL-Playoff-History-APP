@@ -2135,6 +2135,14 @@ h3,
   white-space: normal;
 }
 
+.marquee-broadcast-chunk--manual {
+  border-color: color-mix(in srgb, var(--broadcast-badge-news) 55%, rgba(255, 255, 255, 0.12));
+  background: color-mix(in srgb, var(--broadcast-badge-news) 14%, rgba(255, 255, 255, 0.07));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--broadcast-badge-news) 35%, transparent),
+    0 6px 18px rgba(0, 0, 0, 0.22);
+}
+
 @keyframes marquee-broadcast-scroll {
   from {
     transform: translateX(0);

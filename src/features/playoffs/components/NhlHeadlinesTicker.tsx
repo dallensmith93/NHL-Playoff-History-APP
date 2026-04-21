@@ -1,38 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
+import { MANUAL_NHL_NEWS_BRIEFS } from '../data/manualNhlNewsBriefs';
+import {
+  enrichBlurbsSequential,
+  excerptFromRssDescription,
+  plainText,
+} from '../services/espnStoryExcerpt';
 
 const ESPN_NHL_RSS = 'https://www.espn.com/espn/rss/nhl/news';
 
-const TEASER_MAX = 200;
-
-export interface NhlHeadlineItem {
+export interface NhlStoryRow {
   /** Used only for playoff relevance sort — not shown in the ticker. */
   title: string;
-  /** Short story text from RSS description. */
+  link: string;
+  /** One–two sentence excerpt; never the RSS headline. */
   blurb: string;
 }
 
-function plainText(s: string): string {
-  const t = s.replace(/\s+/g, ' ').trim();
-  if (!t.includes('<')) return t;
-  try {
-    const doc = new DOMParser().parseFromString(`<div>${t}</div>`, 'text/html');
-    return doc.body.textContent?.replace(/\s+/g, ' ').trim() ?? t;
-  } catch {
-    return t;
-  }
-}
-
-function clipTeaser(s: string, maxLen: number): string {
-  const t = plainText(s);
-  if (t.length <= maxLen) return t;
-  const slice = t.slice(0, maxLen);
-  const lastSpace = slice.lastIndexOf(' ');
-  const base = lastSpace > 40 ? slice.slice(0, lastSpace) : slice;
-  return `${base.trimEnd()}…`;
-}
-
-function playoffBoost(text: string): number {
-  const t = text.toLowerCase();
+function playoffBoost(title: string, blurb: string): number {
+  const t = `${title} ${blurb}`.toLowerCase();
   let n = 0;
   if (t.includes('playoff')) n += 3;
   if (t.includes('stanley')) n += 3;
@@ -41,25 +26,36 @@ function playoffBoost(text: string): number {
   return n;
 }
 
-function parseRss(xml: string): NhlHeadlineItem[] {
+function parseRss(xml: string): NhlStoryRow[] {
   const doc = new DOMParser().parseFromString(xml, 'text/xml');
   const err = doc.querySelector('parsererror');
   if (err) return [];
   const items = [...doc.querySelectorAll('item')];
-  const out: NhlHeadlineItem[] = [];
+  const out: NhlStoryRow[] = [];
   for (const el of items) {
     const title = el.querySelector('title')?.textContent?.trim() ?? '';
+    const link = el.querySelector('link')?.textContent?.trim() ?? '';
     const rawDesc = el.querySelector('description')?.textContent?.trim() ?? '';
-    const fromDesc = clipTeaser(rawDesc, TEASER_MAX);
-    const blurb = fromDesc || clipTeaser(title, TEASER_MAX);
-    if (blurb) out.push({ title: title || blurb, blurb });
+    const blurb = excerptFromRssDescription(rawDesc);
+    if (!title || !link) continue;
+    out.push({ title, link, blurb });
   }
   return out;
 }
 
 export function NhlHeadlinesTicker() {
-  const [items, setItems] = useState<NhlHeadlineItem[]>([]);
+  const [stories, setStories] = useState<NhlStoryRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const manualRows = useMemo(
+    () =>
+      MANUAL_NHL_NEWS_BRIEFS.map((m) => ({
+        title: m.id,
+        link: `manual:${m.id}`,
+        blurb: m.blurb,
+      })),
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -70,11 +66,23 @@ export function NhlHeadlinesTicker() {
         const xml = await res.text();
         if (cancelled) return;
         const parsed = parseRss(xml);
-        if (parsed.length > 0) setItems(parsed);
+        const sorted = [...parsed].sort(
+          (a, b) => playoffBoost(b.title, b.blurb) - playoffBoost(a.title, a.blurb),
+        );
+        if (sorted.length > 0) setStories(sorted);
+        else setStories([]);
         setError(null);
+
+        if (sorted.length > 0 && !cancelled) {
+          await enrichBlurbsSequential(sorted, (link, blurb) => {
+            if (cancelled) return;
+            setStories((prev) => prev.map((s) => (s.link === link ? { ...s, blurb } : s)));
+          });
+        }
       } catch (e) {
         if (cancelled) return;
         setError(e instanceof Error ? e.message : 'Could not load headlines');
+        setStories([]);
       }
     };
     void load();
@@ -85,53 +93,12 @@ export function NhlHeadlinesTicker() {
     };
   }, []);
 
-  const sorted = useMemo(() => {
-    if (items.length === 0) return [];
-    return [...items].sort(
-      (a, b) =>
-        playoffBoost(`${b.title} ${b.blurb}`) - playoffBoost(`${a.title} ${a.blurb}`),
-    );
-  }, [items]);
+  const feedPending = stories.length === 0 && !error;
 
-  if (sorted.length === 0 && !error) {
-    return (
-      <div className="marquee-broadcast marquee-broadcast--news playoffs-stack-item">
-        <header className="marquee-broadcast-top">
-          <span className="marquee-broadcast-badge marquee-broadcast-badge--news" aria-hidden="true">
-            NHL news
-          </span>
-          <div className="marquee-broadcast-headline">
-            <span className="marquee-broadcast-title">Briefs</span>
-            <span className="marquee-broadcast-sub">Loading updates…</span>
-          </div>
-        </header>
-        <div className="marquee-broadcast-tape marquee-broadcast-tape--idle">
-          <p className="marquee-broadcast-idle-msg">Pulling short hockey stories from the feed.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error && sorted.length === 0) {
-    return (
-      <div className="marquee-broadcast marquee-broadcast--news playoffs-stack-item">
-        <header className="marquee-broadcast-top">
-          <span className="marquee-broadcast-badge marquee-broadcast-badge--news" aria-hidden="true">
-            NHL news
-          </span>
-          <div className="marquee-broadcast-headline">
-            <span className="marquee-broadcast-title">Briefs</span>
-            <span className="marquee-broadcast-sub">Feed unavailable</span>
-          </div>
-        </header>
-        <div className="marquee-broadcast-tape marquee-broadcast-tape--idle">
-          <p className="marquee-broadcast-idle-msg">Updates unavailable ({error}).</p>
-        </div>
-      </div>
-    );
-  }
-
-  const briefs = sorted.slice(0, 18);
+  const briefs = useMemo(() => {
+    const fromFeed = stories.filter((s) => plainText(s.blurb).length >= 14).slice(0, 16);
+    return [...manualRows, ...fromFeed].slice(0, 20);
+  }, [stories, manualRows]);
 
   return (
     <div className="marquee-broadcast marquee-broadcast--news playoffs-stack-item" role="region" aria-label="NHL news briefs">
@@ -142,26 +109,44 @@ export function NhlHeadlinesTicker() {
         <div className="marquee-broadcast-headline">
           <span className="marquee-broadcast-title">Briefs</span>
           <span className="marquee-broadcast-sub">
-            Short stories via ESPN RSS · playoff-related items ranked first
+            Latest curated items first, then story excerpts from ESPN (not headlines). When the feed only has teaser
+            questions, we pull the first lines of the article text as a short summary.
+            {feedPending ? ' · Fetching the RSS feed…' : ''}
           </span>
         </div>
       </header>
       {error ? (
-        <p className="marquee-broadcast-warn">Some refreshes failed ({error}); showing last good crawl.</p>
+        <p className="marquee-broadcast-warn">
+          ESPN RSS unavailable ({error}). Showing curated items only until the feed loads again.
+        </p>
       ) : null}
       <div className="marquee-broadcast-tape">
         <div className="marquee-broadcast-clip">
           <div className="marquee-broadcast-track marquee-broadcast-track--news">
             <div className="marquee-broadcast-group">
               {briefs.map((h, i) => (
-                <span key={`brief-${i}`} className="marquee-broadcast-chunk marquee-broadcast-chunk--news">
+                <span
+                  key={`brief-${i}-${h.link}`}
+                  className={
+                    h.link.startsWith('manual:')
+                      ? 'marquee-broadcast-chunk marquee-broadcast-chunk--news marquee-broadcast-chunk--manual'
+                      : 'marquee-broadcast-chunk marquee-broadcast-chunk--news'
+                  }
+                >
                   {h.blurb}
                 </span>
               ))}
             </div>
             <div className="marquee-broadcast-group" aria-hidden="true">
               {briefs.map((h, i) => (
-                <span key={`brief-dup-${i}`} className="marquee-broadcast-chunk marquee-broadcast-chunk--news">
+                <span
+                  key={`brief-dup-${i}-${h.link}`}
+                  className={
+                    h.link.startsWith('manual:')
+                      ? 'marquee-broadcast-chunk marquee-broadcast-chunk--news marquee-broadcast-chunk--manual'
+                      : 'marquee-broadcast-chunk marquee-broadcast-chunk--news'
+                  }
+                >
                   {h.blurb}
                 </span>
               ))}
