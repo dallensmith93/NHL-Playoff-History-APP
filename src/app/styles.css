@@ -5,6 +5,13 @@
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
   --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.08);
   --accent-glow: color-mix(in srgb, var(--link) 22%, transparent);
+  /* Game status chips: live = green, final = red, OT/SO = yellow */
+  --status-game-live: #16a34a;
+  --status-game-final: #dc2626;
+  --status-game-ot: #d97706;
+  --status-game-ot-text: #1c1917;
+  --status-game-soon: #0b4f8a;
+  --status-game-soon-text: #f8fafc;
 }
 
 :root,
@@ -28,6 +35,8 @@
   --border: #2a3542;
   --link: #6cb8ff;
   --nav-bg: rgba(12, 16, 20, 0.92);
+  --status-game-soon: #3b7fc7;
+  --status-game-soon-text: #f0f4f8;
 }
 
 /* Cross-browser baseline (iOS text zoom, color-scheme, notched screens, focus) */
@@ -1559,13 +1568,13 @@ h3,
 }
 
 .live-score-badge--live {
-  background: #1a7f37;
+  background: var(--status-game-live, #16a34a);
   color: #fff;
 }
 
 .live-score-badge--soon {
-  background: color-mix(in srgb, var(--link) 75%, var(--surface-2));
-  color: var(--surface-1);
+  background: var(--status-game-soon, var(--link));
+  color: var(--status-game-soon-text, #fff);
 }
 
 .live-score-badge--unknown {
@@ -1574,22 +1583,22 @@ h3,
 }
 
 .live-score-badge--final {
-  background: #b91c1c;
+  background: var(--status-game-final, #dc2626);
   color: #fff;
 }
 
 [data-theme='dark'] .live-score-badge--final {
-  background: #dc2626;
+  background: #ef4444;
   color: #fff;
 }
 
 .live-score-badge--ot {
-  background: #ca8a04;
-  color: #1c1917;
+  background: var(--status-game-ot, #d97706);
+  color: var(--status-game-ot-text, #1c1917);
 }
 
 [data-theme='dark'] .live-score-badge--ot {
-  background: #eab308;
+  background: #facc15;
   color: #1c1917;
 }
 
@@ -2144,7 +2153,9 @@ h3,
 
 .marquee-broadcast-chunk--score {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 0.4rem 0.55rem;
   padding: 0.75rem 1.35rem;
   font-family: var(--font-display);
   font-size: 1.06rem;
@@ -2154,7 +2165,55 @@ h3,
   line-height: 1.45;
   color: var(--broadcast-tape-text);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  max-width: min(30rem, 92vw);
+}
+
+.marquee-broadcast-chunk-main {
+  flex: 1 1 12rem;
+  min-width: 0;
+  white-space: normal;
+}
+
+.marquee-broadcast-ribbon {
+  font-family: var(--font-sans);
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.16rem 0.45rem;
+  border-radius: 3px;
+  flex: 0 0 auto;
+  line-height: 1.2;
+}
+
+.marquee-broadcast-ribbon--soon {
+  background: var(--status-game-soon, var(--link));
+  color: var(--status-game-soon-text, #fff);
+}
+
+.marquee-broadcast-ribbon--live {
+  background: var(--status-game-live, #16a34a);
+  color: #fff;
+}
+
+.marquee-broadcast-ribbon--final {
+  background: var(--status-game-final, #dc2626);
+  color: #fff;
+}
+
+[data-theme='dark'] .marquee-broadcast-ribbon--final {
+  background: #ef4444;
+  color: #fff;
+}
+
+.marquee-broadcast-ribbon--ot {
+  background: var(--status-game-ot, #d97706);
+  color: var(--status-game-ot-text, #1c1917);
+}
+
+[data-theme='dark'] .marquee-broadcast-ribbon--ot {
+  background: #facc15;
+  color: #1c1917;
 }
 
 @media (max-width: 520px) {

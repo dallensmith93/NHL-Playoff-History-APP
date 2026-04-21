@@ -1,14 +1,7 @@
 import type { LivePlayoffGame } from '../types/liveScores';
 import { formatGameStartTimeLocal } from '../utils/formatGameTime';
+import { overtimeLabel } from '../utils/liveGameLabels';
 import { MarqueeScrollRow } from './MarqueeScrollRow';
-
-function overtimeLabel(g: LivePlayoffGame): string | null {
-  if (g.isShootout) return 'SO';
-  if (!g.isOvertime) return null;
-  const n = g.periodNumber;
-  if (typeof n === 'number' && Number.isFinite(n) && n >= 4) return `OT${n - 3}`;
-  return 'OT';
-}
 
 function tvSuffix(g: LivePlayoffGame): string {
   if (!g.tvStations?.length) return '';
@@ -20,17 +13,27 @@ function startTimeSuffix(iso: string): string {
   return t ? ` · ${t}` : '';
 }
 
-function segmentForGame(g: LivePlayoffGame): string {
+function stateRibbonClass(g: LivePlayoffGame): 'soon' | 'live' | 'final' {
+  if (g.state === 'scheduled') return 'soon';
+  if (g.state === 'final') return 'final';
+  return 'live';
+}
+
+function stateRibbonText(g: LivePlayoffGame): string {
+  if (g.state === 'scheduled') return 'Soon';
+  if (g.state === 'final') return 'Final';
+  return g.state === 'unknown' ? 'Live' : 'Live';
+}
+
+function scoreLineText(g: LivePlayoffGame): string {
   if (g.state === 'scheduled') {
     return `${g.awayAbbr} @ ${g.homeAbbr}${startTimeSuffix(g.gameDateUtc)}${tvSuffix(g)}`;
   }
   if (g.state === 'final') {
-    const ot = overtimeLabel(g);
-    return `${g.awayAbbr} ${g.awayScore} @ ${g.homeAbbr} ${g.homeScore} Final${ot ? ` ${ot}` : ''}${startTimeSuffix(g.gameDateUtc)}${tvSuffix(g)}`;
+    return `${g.awayAbbr} ${g.awayScore} @ ${g.homeAbbr} ${g.homeScore}${startTimeSuffix(g.gameDateUtc)}${tvSuffix(g)}`;
   }
-  const ot = overtimeLabel(g);
   const clock = g.inIntermission ? 'INT' : g.clockTimeRemaining;
-  const tail = [g.liveDetailLine, ot, clock].filter(Boolean).join(' · ');
+  const tail = [g.liveDetailLine, clock].filter(Boolean).join(' · ');
   return `${g.awayAbbr} ${g.awayScore} @ ${g.homeAbbr} ${g.homeScore}${tail ? ` · ${tail}` : ''}${tvSuffix(g)}`;
 }
 
@@ -57,11 +60,20 @@ export function LiveScoresMarquee({ games }: { games: LivePlayoffGame[] }) {
       </header>
       <div className="marquee-broadcast-tape">
         <MarqueeScrollRow ariaLabel="Today’s game scores">
-          {games.map((g) => (
-            <span key={g.gamePk} className="marquee-broadcast-chunk marquee-broadcast-chunk--score">
-              {segmentForGame(g)}
-            </span>
-          ))}
+          {games.map((g) => {
+            const ot = overtimeLabel(g);
+            return (
+              <span key={g.gamePk} className="marquee-broadcast-chunk marquee-broadcast-chunk--score">
+                <span className={`marquee-broadcast-ribbon marquee-broadcast-ribbon--${stateRibbonClass(g)}`}>
+                  {stateRibbonText(g)}
+                </span>
+                {g.state !== 'scheduled' && ot ? (
+                  <span className="marquee-broadcast-ribbon marquee-broadcast-ribbon--ot">{ot}</span>
+                ) : null}
+                <span className="marquee-broadcast-chunk-main">{scoreLineText(g)}</span>
+              </span>
+            );
+          })}
         </MarqueeScrollRow>
       </div>
     </div>

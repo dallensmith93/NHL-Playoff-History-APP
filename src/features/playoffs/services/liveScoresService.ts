@@ -167,7 +167,9 @@ async function enrichLiveGamesWithGameCenter(
   games: LivePlayoffGame[],
   signal?: AbortSignal,
 ): Promise<LivePlayoffGame[]> {
-  const need = games.filter((g) => g.state === 'live' || g.state === 'unknown');
+  const need = games.filter(
+    (g) => g.state === 'live' || g.state === 'unknown' || g.state === 'final',
+  );
   if (need.length === 0) return games;
 
   const results = await Promise.all(

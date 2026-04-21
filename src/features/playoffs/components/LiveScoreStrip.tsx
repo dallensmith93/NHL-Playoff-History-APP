@@ -1,14 +1,7 @@
 import type { LivePlayoffGame } from '../types/liveScores';
 import { useTodayStripGames } from '../hooks/useTodayStripGames';
 import { formatGameStartDetails } from '../utils/formatGameTime';
-
-function overtimeLabel(g: LivePlayoffGame): string | null {
-  if (g.isShootout) return 'SO';
-  if (!g.isOvertime) return null;
-  const n = g.periodNumber;
-  if (typeof n === 'number' && Number.isFinite(n) && n >= 4) return `OT${n - 3}`;
-  return 'OT';
-}
+import { overtimeLabel } from '../utils/liveGameLabels';
 
 function badgeLabel(g: LivePlayoffGame): string {
   if (g.state === 'scheduled') return 'Soon';
@@ -36,8 +29,11 @@ export function LiveScoreStrip({ games }: { games: LivePlayoffGame[] }) {
         {stripGames.map((g) => (
           <div key={g.gamePk} className="live-score-pill">
             <span className={`live-score-badge${badgeClass(g)}`}>{badgeLabel(g)}</span>
-            {g.state !== 'scheduled' && g.state !== 'final' && overtimeLabel(g) ? (
-              <span className="live-score-badge live-score-badge--ot" title="Overtime">
+            {g.state !== 'scheduled' && overtimeLabel(g) ? (
+              <span
+                className="live-score-badge live-score-badge--ot"
+                title={g.isShootout ? 'Shootout' : 'Overtime'}
+              >
                 {overtimeLabel(g)}
               </span>
             ) : null}
