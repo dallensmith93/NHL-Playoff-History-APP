@@ -7,13 +7,16 @@ import { DEFAULT_SIMULATION_WEIGHTS } from '../../../data/simulationWeights';
 import type { MonteCarloSummary, QuickSimResult } from '../../../types/playoffs';
 import type { PlayoffSimModePersisted } from '../../../types/persistence';
 import { VisitorRegionNote } from '../../../components/VisitorRegionNote';
-import { LiveScoreStrip } from '../components/LiveScoreStrip';
+import { GameBettingLinesStrip } from '../components/GameBettingLinesStrip';
+import { LiveScoresMarquee } from '../components/LiveScoresMarquee';
+import { NhlHeadlinesTicker } from '../components/NhlHeadlinesTicker';
 import { PlayoffBracketView } from '../components/PlayoffBracketView';
 import { PlayoffScoresByRound } from '../components/PlayoffScoresByRound';
 import { PredictionSummary } from '../components/PredictionSummary';
 import { TeamOddsTable } from '../components/TeamOddsTable';
 import { UpsetAlertsPanel } from '../components/UpsetAlertsPanel';
 import { usePlayoffLive } from '../context/PlayoffLiveContext';
+import { useTodayStripGames } from '../hooks/useTodayStripGames';
 import { buildSeriesOverlaysForBracket } from '../utils/mergeBracketWithLive';
 import { explainOddsShift } from '../utils/probabilities';
 import { buildWinnersMap, resolvePlayoffEntry } from '../utils/seriesTracking';
@@ -69,8 +72,24 @@ export function PlayoffsBracketPage() {
   const { state, setPlayoffPredictor } = usePersistence();
   const pp = state.playoffPredictor;
 
-  const { bracket, liveGames, liveIndex, source, fetchedAt, error, usedFallback, refresh, loading } =
-    usePlayoffLive();
+  const {
+    bracket,
+    liveGames,
+    liveIndex,
+    source,
+    fetchedAt,
+    error,
+    usedFallback,
+    refresh,
+    loading,
+    partnerOddsByGameId,
+    partnerOddsBook,
+    partnerOddsSiteUrl,
+    partnerOddsUpdated,
+    partnerOddsError,
+  } = usePlayoffLive();
+
+  const todayStripGames = useTodayStripGames(liveGames);
 
   const seriesById = useMemo(() => getSeriesByIdFromBracket(bracket), [bracket]);
 
@@ -239,9 +258,25 @@ export function PlayoffsBracketPage() {
       })
     : '—';
 
+  const oddsUpdatedLabel = partnerOddsUpdated
+    ? new Date(partnerOddsUpdated).toLocaleString(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      })
+    : null;
+
   return (
     <div className="playoffs-bracket-page">
-      <LiveScoreStrip games={liveGames} />
+      <GameBettingLinesStrip
+        games={todayStripGames}
+        oddsByGameId={partnerOddsByGameId}
+        partnerName={partnerOddsBook}
+        partnerSiteUrl={partnerOddsSiteUrl}
+        oddsUpdatedLabel={oddsUpdatedLabel}
+        oddsError={partnerOddsError}
+      />
+      <LiveScoresMarquee games={todayStripGames} />
+      <NhlHeadlinesTicker />
 
       <div className="page-hero">
         <h1>{bracket.title}</h1>

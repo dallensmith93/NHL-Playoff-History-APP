@@ -11,6 +11,7 @@ import {
 import { PLAYOFF_TEAM_STATS_2026 } from '../../../data/playoffTeamStats2026';
 import { DEFAULT_SIMULATION_WEIGHTS } from '../../../data/simulationWeights';
 import { fetchPlayoffScoreboard, getDefaultScheduleWindow } from '../services/liveScoresService';
+import { fetchPartnerGameOdds, type PartnerGameOddsSummary } from '../services/partnerOddsService';
 import type { LivePlayoffGame, LiveDataSource } from '../types/liveScores';
 import { mergeBracketWithLive, indexLiveGamesByMatchup } from '../utils/mergeBracketWithLive';
 
@@ -41,6 +42,12 @@ export interface UseLivePlayoffScoresResult {
   refresh: () => void;
   /** True while first fetch in flight */
   loading: boolean;
+  /** NHL partner API (US) — moneyline, puck line, total by `gamePk`. */
+  partnerOddsByGameId: Map<number, PartnerGameOddsSummary> | null;
+  partnerOddsBook: string | null;
+  partnerOddsSiteUrl: string | undefined;
+  partnerOddsUpdated: string | null;
+  partnerOddsError: string | null;
 }
 
 export function useLivePlayoffScores(options?: {
@@ -60,6 +67,11 @@ export function useLivePlayoffScores(options?: {
   const [error, setError] = useState<string | null>(null);
   const [usedFallback, setUsedFallback] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [partnerOddsByGameId, setPartnerOddsByGameId] = useState<Map<number, PartnerGameOddsSummary> | null>(null);
+  const [partnerOddsBook, setPartnerOddsBook] = useState<string | null>(null);
+  const [partnerOddsSiteUrl, setPartnerOddsSiteUrl] = useState<string | undefined>(undefined);
+  const [partnerOddsUpdated, setPartnerOddsUpdated] = useState<string | null>(null);
+  const [partnerOddsError, setPartnerOddsError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const liveGamesRef = useRef<LivePlayoffGame[]>([]);
   const pollAfterLiveUntilRef = useRef(0);
@@ -72,11 +84,31 @@ export function useLivePlayoffScores(options?: {
     abortRef.current = ac;
     if (!opts?.silent) setLoading(true);
     const win = getDefaultScheduleWindow();
-    const res = await fetchPlayoffScoreboard({
-      startDate: win.start,
-      endDate: win.end,
-      signal: ac.signal,
-    });
+    const [res, oddsRes] = await Promise.all([
+      fetchPlayoffScoreboard({
+        startDate: win.start,
+        endDate: win.end,
+        signal: ac.signal,
+      }),
+      fetchPartnerGameOdds('US', ac.signal).then(
+        (o) => ({ type: 'ok' as const, o }),
+        (e: unknown) => ({
+          type: 'err' as const,
+          msg: e instanceof Error ? e.message : 'odds fetch failed',
+        }),
+      ),
+    ]);
+
+    if (oddsRes.type === 'ok') {
+      setPartnerOddsByGameId(oddsRes.o.byGameId);
+      setPartnerOddsBook(oddsRes.o.partnerName);
+      setPartnerOddsSiteUrl(oddsRes.o.partnerSiteUrl);
+      setPartnerOddsUpdated(oddsRes.o.lastUpdatedUTC);
+      setPartnerOddsError(null);
+    } else {
+      setPartnerOddsError(oddsRes.msg);
+    }
+
     const games = res.games;
     setLiveGames(games);
 
@@ -185,5 +217,10 @@ export function useLivePlayoffScores(options?: {
     usedFallback,
     refresh,
     loading,
+    partnerOddsByGameId,
+    partnerOddsBook,
+    partnerOddsSiteUrl,
+    partnerOddsUpdated,
+    partnerOddsError,
   };
 }
