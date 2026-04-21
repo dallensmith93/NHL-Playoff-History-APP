@@ -56,10 +56,7 @@ function useLocalCalendarDayKey(): string {
   return key;
 }
 
-/** Prefer live, then scheduled, then final for same-day strip. */
 function sortStripGames(games: LivePlayoffGame[]): LivePlayoffGame[] {
-  const rank = (g: LivePlayoffGame) =>
-    g.state === 'live' ? 0 : g.state === 'scheduled' ? 1 : g.state === 'final' ? 2 : g.state === 'unknown' ? 3 : 4;
   return [...games]
     .filter(
       (g) =>
@@ -68,12 +65,30 @@ function sortStripGames(games: LivePlayoffGame[]): LivePlayoffGame[] {
         g.state === 'scheduled' ||
         g.state === 'unknown',
     )
-    .sort((a, b) => {
-      const rd = rank(a) - rank(b);
-      if (rd !== 0) return rd;
-      return new Date(a.gameDateUtc).getTime() - new Date(b.gameDateUtc).getTime();
-    })
+    // Keep games in their chronological slot so cards do not jump around as status changes.
+    .sort((a, b) => new Date(a.gameDateUtc).getTime() - new Date(b.gameDateUtc).getTime())
     .slice(0, 32);
+}
+
+function overtimeLabel(g: LivePlayoffGame): string | null {
+  if (g.isShootout) return 'SO';
+  if (!g.isOvertime) return null;
+  const n = g.periodNumber;
+  if (typeof n === 'number' && Number.isFinite(n) && n >= 4) return `OT${n - 3}`;
+  return 'OT';
+}
+
+function badgeLabel(g: LivePlayoffGame): string {
+  if (g.state === 'scheduled') return 'Soon';
+  if (g.state === 'final') return 'Final';
+  // Unknown in the feed is usually still in-progress context; keep this as Live.
+  return 'Live';
+}
+
+function badgeClass(g: LivePlayoffGame): string {
+  if (g.state === 'scheduled') return ' live-score-badge--soon';
+  if (g.state === 'final') return ' live-score-badge--final';
+  return ' live-score-badge--live';
 }
 
 export function LiveScoreStrip({ games }: { games: LivePlayoffGame[] }) {
@@ -87,7 +102,7 @@ export function LiveScoreStrip({ games }: { games: LivePlayoffGame[] }) {
   if (stripGames.length === 0) return null;
 
   return (
-    <div className="live-score-strip card card-pad" style={{ marginBottom: '1rem', overflowX: 'auto' }}>
+    <div className="live-score-strip card card-pad" style={{ marginBottom: '1rem' }}>
       <p className="live-score-strip-heading muted" style={{ margin: '0 0 0.45rem', fontSize: '0.78rem' }}>
         Today&apos;s games (your local date) · Final stays on the strip until midnight
       </p>
@@ -95,34 +110,24 @@ export function LiveScoreStrip({ games }: { games: LivePlayoffGame[] }) {
         {stripGames.map((g) => (
           <div key={g.gamePk} className="live-score-pill">
             <span
-              className={`live-score-badge${g.state === 'live' ? ' live-score-badge--live' : ''}${g.state === 'scheduled' ? ' live-score-badge--soon' : ''}${g.state === 'unknown' ? ' live-score-badge--unknown' : ''}${g.state === 'final' ? ' live-score-badge--final' : ''}`}
+              className={`live-score-badge${badgeClass(g)}`}
             >
-              {g.state === 'live'
-                ? 'Live'
-                : g.state === 'final'
-                  ? 'Final'
-                  : g.state === 'scheduled'
-                    ? 'Soon'
-                    : g.state === 'unknown'
-                      ? 'Game'
-                      : g.state}
+              {badgeLabel(g)}
             </span>
-            {(g.state === 'live' || g.state === 'unknown') &&
-              (g.isShootout ? (
-                <span className="live-score-badge live-score-badge--ot" title="Shootout">
-                  SO
-                </span>
-              ) : g.isOvertime ? (
-                <span className="live-score-badge live-score-badge--ot" title="Overtime">
-                  OT
-                </span>
-              ) : null)}
+            {(g.state !== 'scheduled' && g.state !== 'final' && overtimeLabel(g)) ? (
+              <span className="live-score-badge live-score-badge--ot" title="Overtime">
+                {overtimeLabel(g)}
+              </span>
+            ) : null}
             {g.state === 'scheduled' ? (
               <>
                 <span className="live-score-abbr">{g.awayAbbr}</span>
                 <span className="live-score-at">@</span>
                 <span className="live-score-abbr">{g.homeAbbr}</span>
                 <span className="live-score-detail muted">Starts {formatStart(g.gameDateUtc)}</span>
+                {g.tvStations && g.tvStations.length > 0 ? (
+                  <span className="live-score-detail muted">TV: {g.tvStations.join(', ')}</span>
+                ) : null}
               </>
             ) : (
               <>
@@ -133,6 +138,9 @@ export function LiveScoreStrip({ games }: { games: LivePlayoffGame[] }) {
                 <span className="live-score-num">{g.homeScore}</span>
                 {g.liveDetailLine ? (
                   <span className="live-score-detail muted">{g.liveDetailLine}</span>
+                ) : null}
+                {g.tvStations && g.tvStations.length > 0 ? (
+                  <span className="live-score-detail muted">TV: {g.tvStations.join(', ')}</span>
                 ) : null}
                 {(g.state === 'live' || g.state === 'unknown') &&
                 (g.inIntermission ||

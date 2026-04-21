@@ -44,6 +44,8 @@ interface NhleScheduleGame {
   awayTeam?: { abbrev?: string; score?: number };
   homeTeam?: { abbrev?: string; score?: number };
   periodDescriptor?: { number?: number; periodType?: string };
+  tvBroadcasts?: { network?: string }[];
+  broadcasts?: { network?: string; name?: string }[];
 }
 
 function mapNhleGameState(gs: string | undefined): LiveGameState {
@@ -95,6 +97,11 @@ function parseNhleScheduleJson(data: unknown, winStart: string, winEnd: string):
       }
 
       const gt = g.gameType;
+      const tvStations = [
+        ...(g.tvBroadcasts ?? []).map((b) => String(b.network ?? '').trim()),
+        ...(g.broadcasts ?? []).map((b) => String(b.network ?? b.name ?? '').trim()),
+      ].filter(Boolean);
+      const uniqTvStations = [...new Set(tvStations)];
       out.push({
         gamePk: g.id,
         gameDateUtc: g.startTimeUTC ?? `${dayDate}T00:00:00Z`,
@@ -105,8 +112,11 @@ function parseNhleScheduleJson(data: unknown, winStart: string, winEnd: string):
         awayScore,
         isFinal,
         liveDetailLine,
+        periodNumber: g.periodDescriptor?.number,
+        periodType: g.periodDescriptor?.periodType,
         gameType: gt !== undefined ? String(gt) : undefined,
         isPlayoffGame: isPlayoffGameType(gt),
+        tvStations: uniqTvStations.length > 0 ? uniqTvStations : undefined,
       });
     }
   }
@@ -181,6 +191,8 @@ async function enrichLiveGamesWithGameCenter(
       const { isOvertime, isShootout } = periodFlagsFromDescriptor(pd);
       extras.isOvertime = isOvertime;
       extras.isShootout = isShootout;
+      extras.periodNumber = pd.number;
+      extras.periodType = pd.periodType;
       if (pd.number && pd.number > 0) {
         const ord = nhlePeriodOrdinal(pd.number);
         const pt = pd.periodType ?? '';

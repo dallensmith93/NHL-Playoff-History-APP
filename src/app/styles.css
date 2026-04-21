@@ -1511,22 +1511,29 @@ h3,
 }
 
 .live-score-strip-inner {
-  display: flex;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 0.5rem;
-  align-items: stretch;
+  align-items: start;
 }
 
 .live-score-pill {
-  display: inline-flex;
-  flex: 0 0 auto;
+  display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.3rem;
   padding: 0.35rem 0.5rem;
   border-radius: 6px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   font-size: 0.82rem;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .live-score-strip-inner {
+    grid-template-columns: 1fr;
+  }
 }
 
 .live-score-badge {

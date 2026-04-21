@@ -56,9 +56,21 @@ function SeriesScoresBlock({
 export function PlayoffScoresByRound({
   bracket,
   winnerBySeries,
+  lastUpdatedLabel,
+  loading,
+  statusMessage,
+  onRefresh,
+  autoRefresh,
+  onAutoRefreshChange,
 }: {
   bracket: PlayoffBracket;
   winnerBySeries: Map<string, string>;
+  lastUpdatedLabel: string;
+  loading: boolean;
+  statusMessage: string;
+  onRefresh: () => void;
+  autoRefresh: boolean;
+  onAutoRefreshChange: (next: boolean) => void;
 }) {
   const hasAnyFinalGame = bracket.rounds.some((r) =>
     r.series.some((s) => s.games.some((g) => g.isFinal)),
@@ -66,6 +78,26 @@ export function PlayoffScoresByRound({
 
   return (
     <section className="card card-pad playoff-scores-by-round" style={{ marginBottom: '1rem' }}>
+      <div className="playoffs-live-status-row" style={{ marginBottom: '0.75rem' }}>
+        <div>
+          <p className="muted" style={{ margin: 0, fontSize: '0.88rem' }}>
+            Last updated: <strong>{lastUpdatedLabel}</strong>
+            {loading ? ' · updating…' : null}
+          </p>
+          <p className="muted" style={{ margin: '0.3rem 0 0', fontSize: '0.85rem' }}>
+            {statusMessage}
+          </p>
+        </div>
+        <div className="playoffs-live-status-actions">
+          <button type="button" className="btn" onClick={onRefresh} disabled={loading}>
+            Refresh now
+          </button>
+          <label className="playoffs-auto-refresh-label">
+            <input type="checkbox" checked={autoRefresh} onChange={(e) => onAutoRefreshChange(e.target.checked)} />
+            Auto-refresh
+          </label>
+        </div>
+      </div>
       <h2 className="display" style={{ fontSize: '1.15rem', margin: '0 0 0.35rem' }}>
         Playoff scores by round
       </h2>

@@ -252,38 +252,16 @@ export function PlayoffsBracketPage() {
         </p>
         <VisitorRegionNote style={{ marginTop: '0.65rem', maxWidth: '42rem' }} />
       </div>
-
-      <section className="card card-pad" style={{ marginBottom: '1rem' }}>
-        <div className="playoffs-live-status-row">
-          <div>
-            <h2 className="display" style={{ fontSize: '1.1rem', margin: '0 0 0.25rem' }}>
-              Live schedule sync
-            </h2>
-            <p className="muted" style={{ margin: 0, fontSize: '0.88rem' }}>
-              Last updated: <strong>{lastUpdatedLabel}</strong>
-              {loading ? ' · updating…' : null}
-            </p>
-            <p className="muted" style={{ margin: '0.35rem 0 0', fontSize: '0.85rem' }}>
-              {dataStatusMessage(source, usedFallback, error)}{error && usedFallback ? ` (${error})` : null}
-            </p>
-          </div>
-          <div className="playoffs-live-status-actions">
-            <button type="button" className="btn" onClick={() => void refresh()} disabled={loading}>
-              Refresh now
-            </button>
-            <label className="playoffs-auto-refresh-label">
-              <input
-                type="checkbox"
-                checked={pp.playoffLiveAutoRefresh !== false}
-                onChange={(e) => setPlayoffPredictor({ playoffLiveAutoRefresh: e.target.checked })}
-              />
-              Auto-refresh scores (about every 5s while live, else ~10–14s)
-            </label>
-          </div>
-        </div>
-      </section>
-
-      <PlayoffScoresByRound bracket={bracket} winnerBySeries={winnerBySeries} />
+      <PlayoffScoresByRound
+        bracket={bracket}
+        winnerBySeries={winnerBySeries}
+        lastUpdatedLabel={lastUpdatedLabel}
+        loading={loading}
+        statusMessage={`${dataStatusMessage(source, usedFallback, error)}${error && usedFallback ? ` (${error})` : ''}`}
+        onRefresh={() => void refresh()}
+        autoRefresh={pp.playoffLiveAutoRefresh !== false}
+        onAutoRefreshChange={(next) => setPlayoffPredictor({ playoffLiveAutoRefresh: next })}
+      />
 
       <section className="card card-pad" style={{ marginBottom: '1rem' }}>
         <h2 className="display" style={{ fontSize: '1.2rem', margin: '0 0 0.75rem' }}>

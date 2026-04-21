@@ -24,9 +24,15 @@ export interface LivePlayoffGame {
   isOvertime?: boolean;
   /** Shootout period. */
   isShootout?: boolean;
+  /** Period number from feed/gamecenter (1,2,3,4...). */
+  periodNumber?: number;
+  /** Raw period type (e.g. REG, OT, SO). */
+  periodType?: string;
   gameType?: string;
   /** True only for NHL playoff games (gameType 3). Bracket merge uses this; score strip shows all types. */
   isPlayoffGame?: boolean;
+  /** Broadcast network names (best-effort from schedule feed). */
+  tvStations?: string[];
 }
 
 export type LiveDataSource = 'live' | 'cached' | 'seed';
