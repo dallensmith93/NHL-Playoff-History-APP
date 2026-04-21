@@ -1,21 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Puck">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#152028"/>
-      <stop offset="100%" stop-color="#0a1016"/>
+      <stop offset="0%" stop-color="#3d5266"/>
+      <stop offset="100%" stop-color="#243444"/>
     </linearGradient>
     <linearGradient id="top" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#5e5e68"/>
-      <stop offset="50%" stop-color="#303038"/>
-      <stop offset="100%" stop-color="#505058"/>
+      <stop offset="0%" stop-color="#9ea6b4"/>
+      <stop offset="35%" stop-color="#6a707c"/>
+      <stop offset="100%" stop-color="#8c94a3"/>
     </linearGradient>
   </defs>
 
+  <!-- Brighter “ice” tile + thin rim so it separates from browser chrome -->
   <rect width="32" height="32" rx="8" fill="url(#bg)"/>
+  <rect
+    width="31"
+    height="31"
+    x="0.5"
+    y="0.5"
+    rx="7.5"
+    fill="none"
+    stroke="#7a8fa3"
+    stroke-opacity="0.55"
+    stroke-width="1"
+  />
 
-  <!-- Chunky puck: reads clearly at 16×16 -->
-  <ellipse cx="16" cy="19" rx="10.5" ry="3.6" fill="#030304"/>
-  <rect x="5.5" y="13.4" width="21" height="5.6" rx="0.5" fill="#18181e"/>
-  <ellipse cx="16" cy="13.4" rx="10.5" ry="3.6" fill="url(#top)"/>
-  <ellipse cx="11.8" cy="12.35" rx="2.8" ry="0.95" fill="#ffffff" opacity="0.22"/>
+  <!-- Slightly larger puck, lighter barrel for contrast -->
+  <ellipse cx="16" cy="19.2" rx="11" ry="3.75" fill="#12141a"/>
+  <rect x="5" y="13.2" width="22" height="6" rx="0.5" fill="#3a3f4d"/>
+  <ellipse cx="16" cy="13.2" rx="11" ry="3.75" fill="url(#top)"/>
+  <ellipse cx="16" cy="13.2" rx="11" ry="3.75" fill="none" stroke="#c5ccd8" stroke-opacity="0.35" stroke-width="0.6"/>
+  <ellipse cx="11.2" cy="11.85" rx="3.2" ry="1.05" fill="#ffffff" opacity="0.55"/>
 </svg>
