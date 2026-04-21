@@ -1,14 +1,6 @@
 import type { LivePlayoffGame } from '../types/liveScores';
 import { useTodayStripGames } from '../hooks/useTodayStripGames';
-
-function formatStart(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  } catch {
-    return iso;
-  }
-}
+import { formatGameStartDetails } from '../utils/formatGameTime';
 
 function overtimeLabel(g: LivePlayoffGame): string | null {
   if (g.isShootout) return 'SO';
@@ -54,7 +46,7 @@ export function LiveScoreStrip({ games }: { games: LivePlayoffGame[] }) {
                 <span className="live-score-abbr">{g.awayAbbr}</span>
                 <span className="live-score-at">@</span>
                 <span className="live-score-abbr">{g.homeAbbr}</span>
-                <span className="live-score-detail muted">Starts {formatStart(g.gameDateUtc)}</span>
+                <span className="live-score-detail muted">Starts {formatGameStartDetails(g.gameDateUtc)}</span>
                 {g.tvStations && g.tvStations.length > 0 ? (
                   <span className="live-score-detail muted">TV: {g.tvStations.join(', ')}</span>
                 ) : null}

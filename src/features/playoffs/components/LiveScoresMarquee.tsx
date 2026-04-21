@@ -1,4 +1,5 @@
 import type { LivePlayoffGame } from '../types/liveScores';
+import { formatGameStartTimeLocal } from '../utils/formatGameTime';
 import { MarqueeScrollRow } from './MarqueeScrollRow';
 
 function overtimeLabel(g: LivePlayoffGame): string | null {
@@ -14,13 +15,18 @@ function tvSuffix(g: LivePlayoffGame): string {
   return ` · TV: ${g.tvStations.join(', ')}`;
 }
 
+function startTimeSuffix(iso: string): string {
+  const t = formatGameStartTimeLocal(iso);
+  return t ? ` · ${t}` : '';
+}
+
 function segmentForGame(g: LivePlayoffGame): string {
   if (g.state === 'scheduled') {
-    return `${g.awayAbbr} @ ${g.homeAbbr} · upcoming${tvSuffix(g)}`;
+    return `${g.awayAbbr} @ ${g.homeAbbr}${startTimeSuffix(g.gameDateUtc)}${tvSuffix(g)}`;
   }
   if (g.state === 'final') {
     const ot = overtimeLabel(g);
-    return `${g.awayAbbr} ${g.awayScore} @ ${g.homeAbbr} ${g.homeScore} Final${ot ? ` ${ot}` : ''}${tvSuffix(g)}`;
+    return `${g.awayAbbr} ${g.awayScore} @ ${g.homeAbbr} ${g.homeScore} Final${ot ? ` ${ot}` : ''}${startTimeSuffix(g.gameDateUtc)}${tvSuffix(g)}`;
   }
   const ot = overtimeLabel(g);
   const clock = g.inIntermission ? 'INT' : g.clockTimeRemaining;
@@ -44,7 +50,8 @@ export function LiveScoresMarquee({ games }: { games: LivePlayoffGame[] }) {
         <div className="marquee-broadcast-headline">
           <span className="marquee-broadcast-title">Today&apos;s games</span>
           <span className="marquee-broadcast-sub">
-            Local calendar date · NHL schedule feed · Scroll sideways (or use the arrows) to pick a game to focus on
+            Local date · start times in your time zone (from NHL schedule) · Scroll sideways (or use the arrows) to
+            pick a game to focus on
           </span>
         </div>
       </header>
